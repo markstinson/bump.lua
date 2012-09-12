@@ -16,6 +16,10 @@ local function newWeakTable(t, mt)
   return setmetatable(t or {}, mt or _weakKeys)
 end
 
+local function sign(n)
+  return n < 0 and -1 or (n > 0  and 1 or 0)
+end
+
 -- a bit faster than math.min
 local function min(a,b) return a < b and a or b end
 
@@ -50,12 +54,12 @@ end
 
 -- given a world coordinate, return the coordinates of the cell that would contain it
 local function _toGrid(wx, wy)
-  return floor(wx / __cellSize) + 1, floor(wy / __cellSize) + 1
+  return floor(wx / __cellSize), floor(wy / __cellSize)
 end
 
 -- Same as _toGrid, but useful for calculating the right/bottom borders of a rectangle (so they are still inside the cell when touching borders)
 local function _toGridFromInside(wx,wy)
-  return ceil(wx / __cellSize), ceil(wy / __cellSize)
+  return ceil(wx / __cellSize) - 1, ceil(wy / __cellSize) - 1
 end
 
 -- given a box in world coordinates, return a box in grid coordinates that contains it
@@ -370,6 +374,41 @@ end
 -- is applied to all items
 function bump.each(f, l,t,w,h)
   _eachInRegion(f, _toGridBox(l,t,w,h))
+end
+
+
+function bump.eachInSegment(x1,y1,x2,y2,f)
+
+  local vx, vy = x2 - x1, y2 - y1
+  local x, y = _toGrid(x1,y1)
+  local ox, oy = _toGrid(x2,y2)
+
+  local stepX, stepY   = sign(vx), sign(vy)
+  local deltaX, deltaY = abs(__cellSize / vx), abs(__cellSize / vy)
+
+  local maxX = ((x + (vx > 0 and 1 or 0)) * __cellSize - x1) / vx
+  local maxY = ((y + (vy > 0 and 1 or 0)) * __cellSize - y1) / vy
+
+
+  local cell = _getCell(x,y)
+  if cell then cell.mark = true end
+
+  while x~=ox or y~=oy do
+
+    if maxX < maxY then
+      maxX = maxX + deltaX
+      x = x + stepX
+    else
+      maxY = maxY + deltaY
+      y = y + stepY
+    end
+
+    cell = _getCell(x,y)
+    if cell then cell.mark = true end
+
+
+  end
+
 end
 
 function bump.collect(l,t,w,h)

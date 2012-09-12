@@ -3,9 +3,11 @@ local map = {}
 local width = 4000
 local height = 2000
 
+local Player     = require 'entities.Player'
 local Entity     = require 'entities.Entity'
 local Block      = require 'entities.Block'
 local Coin       = require 'entities.Coin'
+local Laser      = require 'entities.Laser'
 
 local random = math.random
 
@@ -39,6 +41,13 @@ function map.reset()
              random(-50, 50),
              random(-50, 50))
   end
+
+
+  player = Player:new(60, 60)
+
+  Laser:new(500, 500, player)
+
+  return player
 
 end
 

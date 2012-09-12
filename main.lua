@@ -5,7 +5,6 @@ local camera     = require 'lib.camera'
 
 local map        = require 'map'
 local Entity     = require 'entities.Entity'
-local Player     = require 'entities.Player'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
 local drawDebug   = false  -- draw bump's debug info, fps and memory
@@ -45,8 +44,7 @@ end
 -- loading/resetting the map
 
 local function reset()
-  map.reset()
-  player = Player:new(60, 60)
+  player = map.reset()
 end
 
 function love.load()
