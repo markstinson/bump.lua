@@ -378,7 +378,6 @@ end
 
 
 function bump.eachInSegment(x1,y1,x2,y2,f)
-
   local vx, vy = x2 - x1, y2 - y1
   local x, y = _toGrid(x1,y1)
   local ox, oy = _toGrid(x2,y2)
@@ -406,9 +405,7 @@ function bump.eachInSegment(x1,y1,x2,y2,f)
     cell = _getCell(x,y)
     if cell then cell.mark = true end
 
-
   end
-
 end
 
 function bump.collect(l,t,w,h)
