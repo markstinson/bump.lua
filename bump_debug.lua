@@ -23,7 +23,7 @@ local function _drawCell(cell)
 end
 
 function bump_debug.draw(l,t,w,h)
-  bump.cells.each(_drawCell, bump.grid.getBox(l,t,w,h))
+  bump.cells.each(_drawCell, bump.geom.gridBox(bump.getCellSize(), l,t,w,h))
 end
 
 return bump_debug
