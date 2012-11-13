@@ -38,9 +38,13 @@ local function updatePlayer(dt)
   end
 end
 
-local function collidePlayerWithBlock(dx,dy)
-  player.l = player.l + dx
-  player.t = player.t + dy
+local function collidePlayerWithBlock(block,dx,dy)
+  block.touched = true
+  if math.abs(dx) < math.abs(dy) then
+    player.l = player.l + dx
+  else
+    player.t = player.t + dy
+  end
 end
 
 local function drawPlayer()
@@ -60,7 +64,9 @@ end
 
 local function drawBlocks()
   for _,block in ipairs(blocks) do
-    drawBox(block, 255,0,0)
+    local r,g,b = 255,0,0
+    if block.touched then r,g,b = 255,255,255 end
+    drawBox(block, r,g,b)
   end
 end
 
@@ -70,9 +76,17 @@ end
 -- When a collision occurs, call collideWithBlock with the appropiate parameters
 function bump.collision(obj1, obj2, dx, dy)
   if obj1 == player then
-    collidePlayerWithBlock(dx,dy)
+    collidePlayerWithBlock(obj2,dx,dy)
   elseif obj2 == player then
-    collidePlayerWithBlock(-dx,-dy)
+    collidePlayerWithBlock(obj1,-dx,-dy)
+  end
+end
+
+function bump.endCollision(obj1, obj2)
+  if obj1 == player then
+    obj2.touched = false
+  else
+    obj1.touched = false
   end
 end
 
