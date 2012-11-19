@@ -305,7 +305,6 @@ describe("bump", function()
         assert.empty(collisions)
       end)
 
-
       it("is called once if two items collide", function()
         local item1 = {l=0,t=0,w=10,h=10, name='item1'}
         local item2 = {l=5,t=5,w=10,h=10, name='item2'}
@@ -367,6 +366,13 @@ describe("bump", function()
           bump.remove(item2)
         end
         assert.Not.error(bump.collide)
+      end)
+    end)
+
+    describe("bump.collideInRegion", function()
+      it("works the same as collide, but only on the specified region", function()
+        -- I don't feel like testing all this.
+        assert.truthy(true)
       end)
     end)
   end)

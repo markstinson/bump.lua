@@ -100,6 +100,14 @@ local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
   return intersections, len
 end
 
+local function _triggerEndCollisions()
+  for item,neighbors in pairs(prevCollisions) do
+    for neighbor,_ in pairs(neighbors) do
+      bump.endCollision(item, neighbor)
+    end
+  end
+end
+
 local function _sortByD(a,b) return a.d < b.d end
 
 --------------------------------------
@@ -159,6 +167,7 @@ function bump.each(callback)
     if callback(item) == false then return false end
   end)
 end
+local bump_each = bump.each
 
 -- Execute callback in all items touching the specified region (box)
 function bump.eachInRegion(l,t,w,h, callback)
@@ -170,6 +179,7 @@ function bump.eachInRegion(l,t,w,h, callback)
     end
   end)
 end
+local bump_eachInRegion = bump.eachInRegion
 
 -- Gradually visits all the items in a region defined by a segment. It invokes callback
 -- on all items hit by the segment. It will stop if callback returns false
@@ -197,17 +207,23 @@ end
 -- By default it updates the information of all items before performing the checks.
 -- You may choose to update the information manually by passing false in the param
 -- and using bump.update() on each item that moves manually.
-function bump.collide(globalUpdate)
-  if globalUpdate ~= false then bump.each(bump.update) end
+function bump.collide(updateBefore)
+  if updateBefore ~= false then bump_each(bump.update) end
 
   collisions = util_newWeakTable()
-  bump.each(_collideItemWithNeighbors)
+  bump_each(_collideItemWithNeighbors)
+  _triggerEndCollisions()
 
-  for item,neighbors in pairs(prevCollisions) do
-    for neighbor,_ in pairs(neighbors) do
-      bump.endCollision(item, neighbor)
-    end
-  end
+  prevCollisions = collisions
+end
+
+function bump.collideInRegion(l,t,w,h, updateBefore)
+  local gl,gt,gw,gh = geom_gridBox(l,t,w,h)
+  if updateBefore ~= false then cells_eachItemInBox(gl,gt,gw,gh, bump.update) end
+
+  collisions = util_newWeakTable()
+  cells_eachItemInBox(gl,gt,gw,gh, _collideItemWithNeighbors)
+  _triggerEndCollisions()
 
   prevCollisions = collisions
 end
