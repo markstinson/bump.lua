@@ -37,47 +37,49 @@ function cells.add(item, gl,gt,gw,gh)
   end
 end
 
-function cells.each(callback, gl,gt,gw,gh)
-  if gl then
-    local row, cell
-    for gy=gt,gt+gh do
-      row = store.rows[gy]
-      if row then
-        for gx=gl,gl+gw do
-          cell = row[gx]
-          if cell then callback(cell) end
-        end
-      end
-    end
-  else
-    for _,row in pairs(store.rows) do
-      for _,cell in pairs(row) do
-        callback(cell)
-      end
+function cells.each(callback)
+  for _,row in pairs(store.rows) do
+    for _,cell in pairs(row) do
+      callback(cell)
     end
   end
 end
 local cells_each = cells.each
 
+function cells.eachInBox(gl,gt,gw,gh, callback)
+  local row, cell
+  for gy=gt,gt+gh do
+    row = store.rows[gy]
+    if row then
+      for gx=gl,gl+gw do
+        cell = row[gx]
+        if cell then callback(cell) end
+      end
+    end
+  end
+end
+local cells_eachInBox = cells.eachInBox
+
 function cells.remove(item, gl,gt,gw,gh)
-  cells_each(function(cell)
+  cells_eachInBox(gl, gt, gw, gh, function(cell)
     cell.items[item] = nil
     store.nonEmptyCells[cell] = store.nonEmptyCells[cell] - 1
     if store.nonEmptyCells[cell] == 0 then store.nonEmptyCells[cell] = nil end
-  end, gl,gt,gw,gh)
+  end)
 end
 
-function cells.eachItem(callback, gl,gt,gw,gh, visited)
+function cells.eachItemInBox(gl,gt,gw,gh, callback, visited)
   visited = visited and util.copy(visited) or {}
-  cells_each(function(cell)
+  cells_eachInBox(gl, gt, gw, gh, function(cell)
     for item,_ in pairs(cell.items) do
       if not visited[item] then
         visited[item] = true
         callback(item)
       end
     end
-  end, gl, gt, gw, gh)
+  end)
 end
+
 
 function cells.count()
   local count = 0

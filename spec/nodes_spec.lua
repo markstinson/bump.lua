@@ -75,4 +75,20 @@ describe("bump.nodes", function()
     end)
   end)
 
+  describe(".eachItem", function()
+    it("It's called once per node and item", function()
+      local a,b,c = {},{},{}
+      nodes.add(a, 1,2,3,4,5,6,7,8)
+      nodes.add(b, 1,2,3,4,5,6,7,8)
+      nodes.add(c, 1,2,3,4,5,6,7,8)
+      nodes.each(function(node, item)
+        node.mark = true
+        item.mark = true
+      end)
+      assert.same({true, true, true}, {a.mark, b.mark, c.mark})
+      local na, nb, nc = nodes.get(a), nodes.get(b), nodes.get(c)
+      assert.same({true, true, true}, {na.mark, nb.mark, nc.mark})
+    end)
+  end)
+
 end)

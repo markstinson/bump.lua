@@ -138,7 +138,7 @@ describe("bump", function()
     end)
   end)
 
-  describe(".each", function()
+  describe(".each and .eachInRegion", function()
     local i11, i12, i21, i22, count
 
     local function mark(item)
@@ -155,37 +155,38 @@ describe("bump", function()
       bump.add(i11, i12, i21, i22)
     end)
 
-    it("affects all items if given just one callback function", function()
-      bump.each(mark)
-      assert.same({true, true, true, true}, {i11.mark, i12.mark, i21.mark, i22.mark})
-    end)
-
-    it("executes the callback function only once per item, even if they touch several cells", function()
-      local big = {l=1, t=1, w=80, h=1}
-      bump.add(big)
-      bump.each(mark)
-      assert.equal(5, count)
-    end)
-
-    describe("when given a callback plus a  bounding box", function()
-      it("affects only the items inside that box", function()
-        bump.each(mark, 0,0,20,20)
-        assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
+    describe(".each", function()
+      it("affects all items", function()
+        bump.each(mark)
+        assert.same({true, true, true, true}, {i11.mark, i12.mark, i21.mark, i22.mark})
       end)
-      it("does not affect the items inside the grid box, but outside the specified box", function()
-        bump.each(mark, 0,0,70,20)
-        assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
-      end)
-    end)
 
-    describe("when it triggers the removal of an item", function()
-      it("does not throw errors", function()
+      it("executes the callback function only once per item, even if they touch several cells", function()
+        local big = {l=1, t=1, w=80, h=1}
+        bump.add(big)
+        bump.each(mark)
+        assert.equal(5, count)
+      end)
+
+      it("allows removing items without raising errors", function()
         local removeItem12 = function(item)
           if item == item12 then bump.remove(item) end
         end
         assert.Not.error(function() bump.each(removeItem12) end)
       end)
     end)
+
+    describe(".eachInRegion", function()
+      it("affects only the items inside that box", function()
+        bump.eachInRegion(0,0,20,20, mark)
+        assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
+      end)
+      it("does not affect the items inside the grid box, but outside the specified box", function()
+        bump.eachInRegion(0,0,70,20, mark)
+        assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
+      end)
+    end)
+
   end)
 
   describe("bump.eachInSegment", function()
@@ -206,13 +207,13 @@ describe("bump", function()
     end)
 
     it("does nothing if bump is empty", function()
-      assert.Not.error(function() bump.eachInSegment(mark, 0,0,10,10) end)
+      assert.Not.error(function() bump.eachInSegment(0,0,10,10, mark) end)
     end)
 
     it("does nothing if the segment does not intersect with anything", function()
       local item = {l=20,t=20,w=1,h=1}
       bump.add(item)
-      bump.eachInSegment(mark, 0,0,10,10)
+      bump.eachInSegment(0,0,10,10, mark)
       assert.falsy(item.mark)
     end)
 
@@ -227,31 +228,30 @@ describe("bump", function()
       end)
 
       it("parses the items in the right order", function()
-        bump.eachInSegment(mark, 0,5, 200,5)
+        bump.eachInSegment(0,5, 200,5, mark)
         assert.same({1,2,3}, {item1.mark, item2.mark, item3.mark, item4.mark})
       end)
 
       it("parses the items in reverse order", function()
-        bump.eachInSegment(mark, 200,5, 0,5)
+        bump.eachInSegment(200,5, 0,5, mark)
         assert.same({3,2,1}, {item1.mark, item2.mark, item3.mark, item4.mark})
       end)
 
       it("returns intersections in the right order", function()
-        bump.eachInSegment(mark, 0,5, 80,5)
+        bump.eachInSegment(0,5, 80,5, mark)
         assert.same(intersections, {20,5, 30,5, 40,5, 50,5})
       end)
 
       describe("When the callback returns false", function()
-        local stopOn2 = function(item)
-          mark(item)
-          if item == item2 then return false end
-        end
 
         it("stops parsing", function()
-          bump.eachInSegment(stopOn2, 0,5, 200,5)
+          local stopOn2 = function(item)
+            mark(item)
+            if item == item2 then return false end
+          end
+          bump.eachInSegment(0,5, 200,5, stopOn2)
           assert.same({1,2}, {item1.mark, item2.mark, item3.mark, item4.mark})
         end)
-
       end)
     end)
 

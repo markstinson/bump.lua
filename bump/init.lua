@@ -12,11 +12,11 @@ bump.nodes, bump.cells, bump.geom, bump.util = nodes, cells, geom, util
 --------------------------------------
 -- Locals for faster acdess
 
-local nodes_get, nodes_add, nodes_remove, nodes_update =
-      nodes.get, nodes.add, nodes.remove, nodes.update
+local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
+      nodes.get, nodes.add, nodes.remove, nodes.update, nodes.each
 
-local cells_eachItem, cells_add, cells_remove, cells_get =
-      cells.eachItem, cells.add, cells.remove, cells.get
+local cells_eachItemInBox, cells_add, cells_remove, cells_get =
+      cells.eachItemInBox, cells.add, cells.remove, cells.get
 
 local geom_boxesDisplacement, geom_boxesIntersect, geom_gridBox =
       geom.boxesDisplacement, geom.boxesIntersect, geom.gridBox
@@ -48,7 +48,7 @@ local function _getBiggestIntersection(item, visited)
       nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy
     end
   end
-  cells_eachItem(compareNeighborIntersection, ni.gl, ni.gt, ni.gw, ni.gh, visited)
+  cells_eachItemInBox(ni.gl, ni.gt, ni.gw, ni.gh, compareNeighborIntersection, visited)
   return nNeighbor, nMdx, nMdy, nDx, nDy
 end
 
@@ -151,24 +151,27 @@ function bump.update(item)
   end
 end
 
--- Execute callback in all the items on the region (if no region specified, do it
+-- Execute callback in all the existing items
+-- on the region (if no region specified, do it
 -- in all items)
-function bump.each(callback, l,t,w,h)
-  if l then
-    cells_eachItem(function(item)
-      local node = nodes_get(item)
-      if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
-        callback(item)
-      end
-    end, geom_gridBox(cellSize, l,t,w,h))
-  else
-    cells_eachItem(callback)
-  end
+function bump.each(callback)
+  nodes_each(function(item,_) callback(item) end)
+end
+
+-- Execute callback in all items touching the specified region (box)
+function bump.eachInRegion(l,t,w,h, callback)
+  local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
+  cells_eachItemInBox( gl,gt,gw,gh, function(item)
+    local node = nodes_get(item)
+    if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
+      callback(item)
+    end
+  end)
 end
 
 -- Gradually visits all the items in a region defined by a segment. It invokes callback
 -- on all items hit by the segment. It will stop if callback returns false
-function bump.eachInSegment(callback, x1,y1,x2,y2)
+function bump.eachInSegment(x1,y1,x2,y2, callback)
 
   geom_gridTraverse(cellSize, x1,y1,x2,y2, function(gx,gy)
     local cell = cells_get(gx,gy)
