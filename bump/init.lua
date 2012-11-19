@@ -45,8 +45,7 @@ local function _getBiggestIntersection(item, visited)
     mdx, mdy, dx, dy = geom_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
     area = util_abs(dx*dy)
     if area > nArea then
-      nArea, nMdx, nMdy, nDx, nDy = area, mdx, mdy, dx, dy
-      nNeighbor = neighbor
+      nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy
     end
   end
   cells_eachItem(compareNeighborIntersection, ni.gl, ni.gt, ni.gw, ni.gh, visited)
