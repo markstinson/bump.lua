@@ -95,19 +95,32 @@ describe("bump.cells", function()
 
   describe(".each and .eachInBox", function()
     local c11,c12,c21,c22
+    local counter = 0
     local function mark(cell) cell.mark = true end
+    local function countTill2(cell)
+      counter = counter + 1
+      if counter == 2 then return false end
+    end
     before_each(function()
       c11 = cells.getOrCreate(1,1)
       c12 = cells.getOrCreate(1,2)
       c21 = cells.getOrCreate(2,1)
       c22 = cells.getOrCreate(2,2)
+      counter = 0
     end)
+
     describe(".each", function()
       it("parses all cells", function()
         cells.each(mark)
         assert.same({true, true, true, true}, {c11.mark, c12.mark, c21.mark, c22.mark})
       end)
+
+      it("stops parsing if callback returns false", function()
+        cells.each(countTill2)
+        assert.equals(counter, 2)
+      end)
     end)
+
     describe(".eachInBox", function()
       it("parses only once cell if the box has 0 length", function()
         cells.eachInBox(1,1,0,0, mark)
@@ -124,6 +137,10 @@ describe("bump.cells", function()
       it("parses 4 cells if the box has 1 length", function()
         cells.eachInBox(1,1,1,1, mark)
         assert.same({true, true, true, true}, {c11.mark, c12.mark, c21.mark, c22.mark})
+      end)
+      it("stops parsing if callback returns false", function()
+        cells.eachInBox(1,1,1,1, countTill2)
+        assert.equals(counter, 2)
       end)
     end)
   end)
@@ -159,6 +176,14 @@ describe("bump.cells", function()
       local counter = 0
       cells.eachItemInBox(1,1,1,1, function() counter = counter + 1 end)
       assert.equals(counter, 3)
+    end)
+    it("stops when the callback returns false", function()
+      local counter = 0
+      cells.eachItemInBox(1,1,1,1, function()
+        counter = counter + 1
+        if counter == 2 then return false end
+      end)
+      assert.equals(counter, 2)
     end)
 
     describe("When it results in removing one item", function()

@@ -39,7 +39,7 @@ end
 
 function nodes.each(callback)
   for item,node in pairs(store) do
-    callback(item, node)
+    if callback(item, node) == false then return false end
   end
 end
 

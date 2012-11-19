@@ -40,7 +40,7 @@ end
 function cells.each(callback)
   for _,row in pairs(store.rows) do
     for _,cell in pairs(row) do
-      callback(cell)
+      if callback(cell) == false then return false end
     end
   end
 end
@@ -53,7 +53,9 @@ function cells.eachInBox(gl,gt,gw,gh, callback)
     if row then
       for gx=gl,gl+gw do
         cell = row[gx]
-        if cell then callback(cell) end
+        if cell then
+          if callback(cell) == false then return false end
+        end
       end
     end
   end
@@ -74,12 +76,11 @@ function cells.eachItemInBox(gl,gt,gw,gh, callback, visited)
     for item,_ in pairs(cell.items) do
       if not visited[item] then
         visited[item] = true
-        callback(item)
+        if callback(item) == false then return false end
       end
     end
   end)
 end
-
 
 function cells.count()
   local count = 0

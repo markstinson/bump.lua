@@ -146,6 +146,11 @@ describe("bump", function()
       item.mark = true
     end
 
+    local function countTill2()
+      count = count + 1
+      if count == 2 then return false end
+    end
+
     before_each(function()
       count = 0
       i11 = {l=1, t=1,  w=1, h=1}
@@ -174,6 +179,11 @@ describe("bump", function()
         end
         assert.Not.error(function() bump.each(removeItem12) end)
       end)
+
+      it("stops if the callback returns false", function()
+        bump.each(countTill2)
+        assert.equal(count, 2)
+      end)
     end)
 
     describe(".eachInRegion", function()
@@ -185,8 +195,11 @@ describe("bump", function()
         bump.eachInRegion(0,0,70,20, mark)
         assert.same({true}, {i11.mark, i12.mark, i21.mark, i22.mark})
       end)
+      it("stops if the callback returns false", function()
+        bump.eachInRegion(0,0,100,100, countTill2)
+        assert.equal(count, 2)
+      end)
     end)
-
   end)
 
   describe("bump.eachInSegment", function()
@@ -242,16 +255,13 @@ describe("bump", function()
         assert.same(intersections, {20,5, 30,5, 40,5, 50,5})
       end)
 
-      describe("When the callback returns false", function()
-
-        it("stops parsing", function()
-          local stopOn2 = function(item)
-            mark(item)
-            if item == item2 then return false end
-          end
-          bump.eachInSegment(0,5, 200,5, stopOn2)
-          assert.same({1,2}, {item1.mark, item2.mark, item3.mark, item4.mark})
-        end)
+      it("stops parsing if the callback returns false", function()
+        local stopOn2 = function(item)
+          mark(item)
+          if item == item2 then return false end
+        end
+        bump.eachInSegment(0,5, 200,5, stopOn2)
+        assert.same({1,2}, {item1.mark, item2.mark, item3.mark, item4.mark})
       end)
     end)
 

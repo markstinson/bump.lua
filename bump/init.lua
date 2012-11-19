@@ -155,7 +155,9 @@ end
 -- on the region (if no region specified, do it
 -- in all items)
 function bump.each(callback)
-  nodes_each(function(item,_) callback(item) end)
+  return nodes_each(function(item,_)
+    if callback(item) == false then return false end
+  end)
 end
 
 -- Execute callback in all items touching the specified region (box)
@@ -164,7 +166,7 @@ function bump.eachInRegion(l,t,w,h, callback)
   cells_eachItemInBox( gl,gt,gw,gh, function(item)
     local node = nodes_get(item)
     if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
-      callback(item)
+      if callback(item) == false then return false end
     end
   end)
 end
