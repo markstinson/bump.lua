@@ -188,6 +188,75 @@ describe("bump", function()
     end)
   end)
 
+  describe("bump.eachInSegment", function()
+    local intersections, counter
+    local mark = function(item, x, y)
+      if not item.mark then
+        counter = counter + 1
+        item.mark = counter
+      end
+
+      local len  = #intersections
+      intersections[len+1], intersections[len+2] = x,y
+    end
+
+    before_each(function()
+      intersections = {}
+      counter = 0
+    end)
+
+    it("does nothing if bump is empty", function()
+      assert.Not.error(function() bump.eachInSegment(mark, 0,0,10,10) end)
+    end)
+
+    it("does nothing if the segment does not intersect with anything", function()
+      local item = {l=20,t=20,w=1,h=1}
+      bump.add(item)
+      bump.eachInSegment(mark, 0,0,10,10)
+      assert.falsy(item.mark)
+    end)
+
+    describe("When there are items in bump", function()
+      local item1, item2, item3, item4
+      before_each(function()
+        item1 = {l=20,  t=0,  w=10, h=10}
+        item2 = {l=40,  t=0,  w=10, h=10}
+        item3 = {l=100, t=0,  w=10, h=10}
+        item4 = {l=20,  t=100, w=10, h=10}
+        bump.add(item1, item2, item3, item4)
+      end)
+
+      it("parses the items in the right order", function()
+        bump.eachInSegment(mark, 0,5, 200,5)
+        assert.same({1,2,3}, {item1.mark, item2.mark, item3.mark, item4.mark})
+      end)
+
+      it("parses the items in reverse order", function()
+        bump.eachInSegment(mark, 200,5, 0,5)
+        assert.same({3,2,1}, {item1.mark, item2.mark, item3.mark, item4.mark})
+      end)
+
+      it("returns intersections in the right order", function()
+        bump.eachInSegment(mark, 0,5, 80,5)
+        assert.same(intersections, {20,5, 30,5, 40,5, 50,5})
+      end)
+
+      describe("When the callback returns false", function()
+        local stopOn2 = function(item)
+          mark(item)
+          if item == item2 then return false end
+        end
+
+        it("stops parsing", function()
+          bump.eachInSegment(stopOn2, 0,5, 200,5)
+          assert.same({1,2}, {item1.mark, item2.mark, item3.mark, item4.mark})
+        end)
+
+      end)
+    end)
+
+  end)
+
   describe("bump.collision and bump.collide", function()
 
     it("is empty by efault", function()

@@ -14,9 +14,15 @@ function cells.create(gx,gy)
   store.rows[gy][gx] = cell
   return cell
 end
+local cells_create = cells.create
+
+function cells.get(gx,gy)
+  return store.rows[gy] and store.rows[gy][gx]
+end
+local cells_get = cells.get
 
 function cells.getOrCreate(gx,gy)
-  return store.rows[gy] and store.rows[gy][gx] or cells.create(gx,gy)
+  return cells_get(gx,gy) or cells_create(gx,gy)
 end
 
 function cells.add(item, gl,gt,gw,gh)

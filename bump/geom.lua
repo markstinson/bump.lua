@@ -52,7 +52,7 @@ function geom.boxSegmentIntersection(l,t,w,h, x1,y1,x2,y2)
     end
 
     if p == 0 then
-      if q < 0 then return nil end  -- Segment is parallel and outside the bbox
+      if q < 0 then return nil end
     else
       r = q / p
       if p < 0 then
@@ -67,11 +67,7 @@ function geom.boxSegmentIntersection(l,t,w,h, x1,y1,x2,y2)
     end
   end
 
-  local ix1, iy1, ix2, iy2 = x1 + t0 * dx, y1 + t0 * dy,
-                             x1 + t1 * dx, y1 + t1 * dy
-
-  if ix1 == ix2 and iy1 == iy2 then return ix1, iy1 end
-  return ix1, iy1, ix2, iy2
+  return x1 + t0 * dx, y1 + t0 * dy, x1 + t1 * dx, y1 + t1 * dy
 end
 
 function geom.gridCoords(cellSize, x,y)

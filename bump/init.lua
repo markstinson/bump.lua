@@ -15,11 +15,14 @@ bump.nodes, bump.cells, bump.geom, bump.util = nodes, cells, geom, util
 local nodes_get, nodes_add, nodes_remove, nodes_update =
       nodes.get, nodes.add, nodes.remove, nodes.update
 
-local cells_eachItem, cells_add, cells_remove =
-      cells.eachItem, cells.add, cells.remove
+local cells_eachItem, cells_add, cells_remove, cells_get =
+      cells.eachItem, cells.add, cells.remove, cells.get
 
 local geom_boxesDisplacement, geom_boxesIntersect, geom_gridBox =
       geom.boxesDisplacement, geom.boxesIntersect, geom.gridBox
+
+local geom_gridTraverse, geom_boxSegmentIntersection =
+      geom.gridTraverse, geom.boxSegmentIntersection
 
 local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
@@ -76,6 +79,30 @@ local function _collideItemWithNeighbors(item)
   until not neighbor
 end
 
+local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
+
+  local intersections, len = {}, 0
+  local n, ix1,iy1,ix2,iy2, dx,dy
+
+  for item,_ in pairs(cell.items) do
+    n = nodes_get(item)
+    ix1, iy1, ix2, iy2 =
+      geom_boxSegmentIntersection(n.l, n.t, n.w, n.h, x1, y1, x2, y2)
+    if ix1 then
+      len, dx, dy = len + 1, x1 - ix1, y1 - iy1
+      intersections[len] = { item=item, x=ix1, y=iy1, d=dx*dx + dy*dy }
+      if ix2 ~= ix1 or iy2 ~= iy1 then
+        len, dx, dy = len + 1, x1-ix2, y1-iy2
+        intersections[len] = { item=item, x=ix2, y=iy2, d=dx*dx + dy*dy }
+      end
+    end
+  end
+
+  return intersections, len
+end
+
+local function _sortByD(a,b) return a.d < b.d end
+
 --------------------------------------
 -- Public stuff
 
@@ -128,7 +155,6 @@ end
 -- Execute callback in all the items on the region (if no region specified, do it
 -- in all items)
 function bump.each(callback, l,t,w,h)
-  local visited = {}
   if l then
     cells_eachItem(function(item)
       local node = nodes_get(item)
@@ -139,6 +165,27 @@ function bump.each(callback, l,t,w,h)
   else
     cells_eachItem(callback)
   end
+end
+
+-- Gradually visits all the items in a region defined by a segment. It invokes callback
+-- on all items hit by the segment. It will stop if callback returns false
+function bump.eachInSegment(callback, x1,y1,x2,y2)
+
+  geom_gridTraverse(cellSize, x1,y1,x2,y2, function(gx,gy)
+    local cell = cells_get(gx,gy)
+    if not cell then return end
+
+    local intersections, len = _getCellSegmentIntersections(cell, x1,y1,x2,y2)
+
+    table.sort(intersections, _sortByD)
+
+    local inter
+    for i=1, len do
+      inter = intersections[i]
+      if callback(inter.item, inter.x, inter.y) == false then return false end
+    end
+  end)
+
 end
 
 -- Invoke this function inside your 'update' loop. It will invoke bump.collision and
