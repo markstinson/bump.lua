@@ -4,13 +4,15 @@ local path = (...):gsub("%.init$","")
 
 local nodes  = require(path .. '.nodes')
 local cells  = require(path .. '.cells')
-local geom   = require(path .. '.geom')
+local box    = require(path .. '.box')
+local grid   = require(path .. '.grid')
 local util   = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.geom, bump.util = nodes, cells, geom, util
+bump.nodes, bump.cells, bump.box, bump.grid, bump.util = nodes, cells, box, grid, util
 
 --------------------------------------
 -- Locals for faster acdess
+
 
 local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
       nodes.get, nodes.add, nodes.remove, nodes.update, nodes.each
@@ -18,11 +20,10 @@ local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
 local cells_eachItemInBox, cells_add, cells_remove, cells_get =
       cells.eachItemInBox, cells.add, cells.remove, cells.get
 
-local geom_boxesDisplacement, geom_boxesIntersect, geom_gridBox =
-      geom.boxesDisplacement, geom.boxesIntersect, geom.gridBox
+local box_getDisplacement, box_isIntersecting, box_getSegmentIntersection =
+      box.getDisplacement, box.isIntersecting, box.getSegmentIntersection
 
-local geom_gridTraverse, geom_boxSegmentIntersection =
-      geom.gridTraverse, geom.boxSegmentIntersection
+local grid_getBox, grid_traverse = grid.getBox, grid.traverse
 
 local util_abs, util_newWeakTable = util.abs, util.newWeakTable
 
@@ -40,9 +41,9 @@ local function _getBiggestIntersection(item, visited)
   local compareNeighborIntersection = function(neighbor)
     if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
     nn = nodes_get(neighbor)
-    if not geom_boxesIntersect(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+    if not box_isIntersecting(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
 
-    mdx, mdy, dx, dy = geom_boxesDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    mdx, mdy, dx, dy = box_getDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
     area = util_abs(dx*dy)
     if area > nArea then
       nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy
@@ -86,7 +87,7 @@ local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
   for item,_ in pairs(cell.items) do
     n = nodes_get(item)
     ix1, iy1, ix2, iy2 =
-      geom_boxSegmentIntersection(n.l, n.t, n.w, n.h, x1, y1, x2, y2)
+      box_getSegmentIntersection(n.l, n.t, n.w, n.h, x1, y1, x2, y2)
     if ix1 then
       len, dx, dy = len + 1, x1 - ix1, y1 - iy1
       intersections[len] = { item=item, x=ix1, y=iy1, d=dx*dx + dy*dy }
@@ -124,7 +125,7 @@ function bump.add(item1, ...)
   for i=1, #items do
     local item = items[i]
     local l,t,w,h = bump.getBBox(item)
-    local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
+    local gl,gt,gw,gh = grid_getBox(cellSize, l,t,w,h)
 
     nodes_add(item, l,t,w,h, gl,gt,gw,gh)
     cells_add(item, gl,gt,gw,gh)
@@ -149,7 +150,7 @@ function bump.update(item)
   local l,t,w,h = bump.getBBox(item)
   if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
 
-    local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
+    local gl,gt,gw,gh = grid_getBox(cellSize, l,t,w,h)
     if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
       cells_remove(item, n.gl, n.gt, n.gw, n.gh)
       cells_add(item, gl, gt, gw, gh)
@@ -171,10 +172,10 @@ local bump_each = bump.each
 
 -- Execute callback in all items touching the specified region (box)
 function bump.eachInRegion(l,t,w,h, callback)
-  local gl,gt,gw,gh = geom_gridBox(cellSize, l,t,w,h)
+  local gl,gt,gw,gh = grid_getBox(cellSize, l,t,w,h)
   cells_eachItemInBox( gl,gt,gw,gh, function(item)
     local node = nodes_get(item)
-    if geom_boxesIntersect(l,t,w,h, node.l, node.t, node.w, node.h) then
+    if box_isIntersecting(l,t,w,h, node.l, node.t, node.w, node.h) then
       if callback(item) == false then return false end
     end
   end)
@@ -185,7 +186,7 @@ local bump_eachInRegion = bump.eachInRegion
 -- on all items hit by the segment. It will stop if callback returns false
 function bump.eachInSegment(x1,y1,x2,y2, callback)
 
-  geom_gridTraverse(cellSize, x1,y1,x2,y2, function(gx,gy)
+  grid_traverse(cellSize, x1,y1,x2,y2, function(gx,gy)
     local cell = cells_get(gx,gy)
     if not cell then return end
 
@@ -218,7 +219,7 @@ function bump.collide(updateBefore)
 end
 
 function bump.collideInRegion(l,t,w,h, updateBefore)
-  local gl,gt,gw,gh = geom_gridBox(l,t,w,h)
+  local gl,gt,gw,gh = grid_getBox(l,t,w,h)
   if updateBefore ~= false then cells_eachItemInBox(gl,gt,gw,gh, bump.update) end
 
   collisions = util_newWeakTable()

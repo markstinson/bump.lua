@@ -277,7 +277,7 @@ describe("bump", function()
       local item = {l=1,t=1,w=1,h=1}
       before_each(function()
         spy.on(bump, "update")
-        bump.insert(item)
+        bump.add(item)
       end)
       it("triggers a global item update by default", function()
         bump.collide()
