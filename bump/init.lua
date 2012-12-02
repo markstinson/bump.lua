@@ -4,11 +4,11 @@ local path = (...):gsub("%.init$","")
 
 local nodes  = require(path .. '.nodes')
 local cells  = require(path .. '.cells')
-local box    = require(path .. '.box')
+local aabb    = require(path .. '.aabb')
 local grid   = require(path .. '.grid')
 local util   = require(path .. '.util')
 
-bump.nodes, bump.cells, bump.box, bump.grid, bump.util = nodes, cells, box, grid, util
+bump.nodes, bump.cells, bump.aabb, bump.grid, bump.util = nodes, cells, aabb, grid, util
 
 --------------------------------------
 -- Locals for faster acdess
@@ -20,8 +20,8 @@ local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
 local cells_eachItemInBox, cells_add, cells_remove, cells_get =
       cells.eachItemInBox, cells.add, cells.remove, cells.get
 
-local box_getDisplacement, box_isIntersecting, box_getSegmentIntersection =
-      box.getDisplacement, box.isIntersecting, box.getSegmentIntersection
+local aabb_getDisplacement, aabb_isIntersecting, aabb_getSegmentIntersection =
+      aabb.getDisplacement, aabb.isIntersecting, aabb.getSegmentIntersection
 
 local grid_getBox, grid_traverse = grid.getBox, grid.traverse
 
@@ -41,9 +41,9 @@ local function _getBiggestIntersection(item, visited)
   local compareNeighborIntersection = function(neighbor)
     if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
     nn = nodes_get(neighbor)
-    if not box_isIntersecting(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+    if not aabb_isIntersecting(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
 
-    mdx, mdy, dx, dy = box_getDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    mdx, mdy, dx, dy = aabb_getDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
     area = util_abs(dx*dy)
     if area > nArea then
       nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy
@@ -87,7 +87,7 @@ local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
   for item,_ in pairs(cell.items) do
     n = nodes_get(item)
     ix1, iy1, ix2, iy2 =
-      box_getSegmentIntersection(n.l, n.t, n.w, n.h, x1, y1, x2, y2)
+      aabb_getSegmentIntersection(n.l, n.t, n.w, n.h, x1, y1, x2, y2)
     if ix1 then
       len, dx, dy = len + 1, x1 - ix1, y1 - iy1
       intersections[len] = { item=item, x=ix1, y=iy1, d=dx*dx + dy*dy }
@@ -175,7 +175,7 @@ function bump.eachInRegion(l,t,w,h, callback)
   local gl,gt,gw,gh = grid_getBox(cellSize, l,t,w,h)
   cells_eachItemInBox( gl,gt,gw,gh, function(item)
     local node = nodes_get(item)
-    if box_isIntersecting(l,t,w,h, node.l, node.t, node.w, node.h) then
+    if aabb_isIntersecting(l,t,w,h, node.l, node.t, node.w, node.h) then
       if callback(item) == false then return false end
     end
   end)
