@@ -20,5 +20,10 @@ end
 function util.abs(x)
   return x < 0 and -x or x
 end
+local abs = util.abs
+
+function util.nearest(x, a, b)
+  return abs(a - x) < abs(b - x) and a or b
+end
 
 return util

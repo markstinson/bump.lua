@@ -3,7 +3,8 @@ local aabb = {}
 local path = (...):gsub("%.aabb$","")
 local util       = require(path .. '.util')
 
-local abs = util.abs
+local abs, nearest = util.abs, util.nearest
+
 
 function aabb.isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2
@@ -13,20 +14,24 @@ function aabb.containsPoint(l,t,w,h, x,y)
   return not(x < l or y < t or x > l + w or y > t + h)
 end
 
-function aabb.getDisplacement(l1,t1,w1,h1, l2,t2,w2,h2)
-  local c1x, c2x = (l1+w1) * .5, (l2+w2) * .5
-  local c1y, c2y = (t1+h1) * .5, (t2+h2) * .5
-  local dx = l2 - l1 + (c1x < c2x and -w1 or w2)
-  local dy = t2 - t1 + (c1y < c2y and -h1 or h2)
-  if abs(dx) < abs(dy) then return dx,0,dx,dy end
-  return 0,dy,dx,dy
+function aabb.getNearestPointInPerimeter(l,t,w,h, x,y)
+  return nearest(x, l, l+w), nearest(y, t, t+h)
 end
+local getNearestPointInPerimeter = aabb.getNearestPointInPerimeter
 
 function aabb.getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-  return l1 - l2 - w2,
+  return l2 - l1 - w1,
          t2 - t1 - h1,
          w1 + w2,
          h1 + h2
+end
+local getMinkowskyDiff = aabb.getMinkowskyDiff
+
+function aabb.getDisplacement(l1,t1,w1,h1, l2,t2,w2,h2)
+  local l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  local dx, dy  = getNearestPointInPerimeter(l,t,w,h, 0,0)
+  if abs(dx) < abs(dy) then return dx,0,dx,dy end
+  return 0,dy,dx,dy
 end
 
 function aabb.getSegmentIntersection(l,t,w,h, x1,y1,x2,y2)
