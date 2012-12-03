@@ -41,9 +41,8 @@ local function _getBiggestIntersection(item, visited)
   local compareNeighborIntersection = function(neighbor)
     if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
     nn = nodes_get(neighbor)
-    if not aabb_isIntersecting(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
-
     mdx, mdy, dx, dy = aabb_getDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
+    if not mdx then return end
     area = util_abs(dx*dy)
     if area > nArea then
       nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy

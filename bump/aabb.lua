@@ -13,6 +13,7 @@ end
 function aabb.containsPoint(l,t,w,h, x,y)
   return not(x < l or y < t or x > l + w or y > t + h)
 end
+local containsPoint = aabb.containsPoint
 
 function aabb.getNearestPointInPerimeter(l,t,w,h, x,y)
   return nearest(x, l, l+w), nearest(y, t, t+h)
@@ -29,8 +30,11 @@ local getMinkowskyDiff = aabb.getMinkowskyDiff
 
 function aabb.getDisplacement(l1,t1,w1,h1, l2,t2,w2,h2)
   local l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
+  if not containsPoint(l,t,w,h, 0,0) then return nil end
+
   local dx, dy  = getNearestPointInPerimeter(l,t,w,h, 0,0)
   if abs(dx) < abs(dy) then return dx,0,dx,dy end
+
   return 0,dy,dx,dy
 end
 
