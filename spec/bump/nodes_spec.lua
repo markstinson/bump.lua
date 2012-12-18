@@ -37,11 +37,11 @@ describe("bump.nodes", function()
       assert.equal(0, nodes.count())
     end)
 
-    it("adds bounding box info into the new node", function()
+    it("adds bounding box & displacement info into the new node", function()
       local item = {}
       nodes.add(item, 1,2,3,4,5,6,7,8)
       local n = nodes.get(item)
-      assert.same({1,2,3,4,5,6,7,8}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh})
+      assert.same({1,2,3,4,5,6,7,8,0,0}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh, n.dx, n.dy})
     end)
 
   end)
@@ -66,12 +66,12 @@ describe("bump.nodes", function()
   end)
 
   describe(".update", function()
-    it("updates the bbox of an item", function()
+    it("updates the bbox of an item, including displacement", function()
       local item = {}
       nodes.add(item, 1,2,3,4,5,6,7,8)
       nodes.update(item, 2,2,2,2,2,2,2,2)
       local n = nodes.get(item)
-      assert.same({2,2,2,2,2,2,2,2}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh})
+      assert.same({2,2,2,2,2,2,2,2,-0.5,1}, {n.l, n.t, n.w, n.h, n.gl, n.gt, n.gw, n.gh, n.dx, n.dy})
     end)
   end)
 

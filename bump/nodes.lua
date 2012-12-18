@@ -11,7 +11,7 @@ local util       = require(path .. '.util')
 local store      -- (private) holds the list of created nodes
 
 function nodes.add(item, l,t,w,h, gl,gt,gw,gh)
-  store[item] = {l=l,t=t,w=w,h=h, gl=gl,gt=gt,gw=gw,gh=gh}
+  store[item] = {l=l,t=t,w=w,h=h, gl=gl,gt=gt,gw=gw,gh=gh,dx=0,dy=0}
 end
 
 function nodes.get(item)
@@ -33,8 +33,11 @@ function nodes.remove(item)
 end
 
 function nodes.update(item, l,t,w,h, gl,gt,gw,gh)
-  local n = store[item]
+  local n         = store[item]
+  local pCx, pCy  = n.l + n.w*0.5, n.t + n.h*0.5
+  local cx,cy     = l + w*0.5, t + w*0.5
   n.l,n.t,n.w,n.h,n.gl,n.gt,n.gw,n.gh = l,t,w,h, gl,gt,gw,gh
+  n.dx,n.dy = pCx - cx, pCy - cy
 end
 
 function nodes.each(callback)
