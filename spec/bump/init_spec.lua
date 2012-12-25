@@ -145,7 +145,7 @@ describe("bump", function()
       assert.same({ n.dx, n.dy },             { -44.5, -54.5 })
     end)
 
-    it("updates the cells if the grid bbox has changed #focus", function()
+    it("updates the cells if the grid bbox has changed", function()
       local item = {l=1, t=2, w=3, h=4}
 
       bump.add(item)
@@ -336,7 +336,7 @@ describe("bump", function()
       before_each(function()
         collisions = {}
         bump.collision = function(i1,i2, dx1, dy1, dx2, dy2, t)
-          collisions[#collisions + 1] = {i1=i1.name, i2=i2.name, dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2, t=t}
+          collisions[#collisions + 1] = {i1.name, i2.name, dx1, dy1, dx2, dy2, t}
         end
       end)
 
@@ -345,40 +345,44 @@ describe("bump", function()
         assert.empty(collisions)
       end)
 
-      xit("is called once if two items collide", function()
-        local item1 = {l=0,t=0,w=10,h=10, name='item1'}
-        local item2 = {l=5,t=5,w=10,h=10, name='item2'}
-        bump.add(item1, item2)
-        bump.collide()
-        assert.same({{i1='item1', i2='item2',dx1=-5,dy1=0,dx2=0,dy2=0,t=0}}, collisions)
-      end)
+      describe("When items don't move relatively", function()
 
-      xit("sorts collisions by minimal displacement", function()
-        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
-        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
-        local item3 = {l=3,t=3,w=10,h=10, name='item3'}
-        local item4 = {l=4,t=4,w=10,h=10, name='item4'}
-        bump.add(item1, item2, item3, item4)
+        it("is called once if two items collide", function()
+          local item1 = {l=0,t=0,w=10,h=10, name='item1'}
+          local item2 = {l=4,t=4,w=10,h=10, name='item2'}
+          bump.add(item1, item2)
+          bump.shouldCollide = function(a,b) return a == item1 end
 
-        bump.shouldCollide = function(a,b) return a == item1 end
+          bump.collide()
+          assert.same({{'item1', 'item2',0,-6,0,0,0}}, collisions)
+        end)
 
-        bump.collide(item1)
-        assert.same({
-          {first='item1', second='item2',dx=-9,dy=-9},
-          {first='item1', second='item3',dx=-8,dy=-8},
-          {first='item1', second='item4',dx=-7,dy=-7}
-        }, collisions)
-      end)
+        it("invokes collisions with less displacement first #focus", function()
+          local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+          local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+          local item3 = {l=3,t=3,w=10,h=10, name='item3'}
+          local item4 = {l=4,t=4,w=10,h=10, name='item4'}
+          bump.add(item1, item2, item3, item4)
+          bump.shouldCollide = function(a,b) return a == item1 end
 
-      xit("updates every colliding pair of items", function()
-        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
-        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
-        bump.add(item1, item2)
-        spy.on(bump, "update")
+          bump.collide(item1)
+          assert.same({
+            {'item1','item4',0,-7,0,0,0},
+            {'item1','item3',0,-8,0,0,0},
+            {'item1','item2',0,-9,0,0,0}
+          }, collisions)
+        end)
 
-        bump.collide()
-        assert.spy(bump.update).was.called_with(item1)
-        assert.spy(bump.update).was.called_with(item2)
+        xit("updates every colliding pair of items", function()
+          local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+          local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+          bump.add(item1, item2)
+          spy.on(bump, "update")
+
+          bump.collide()
+          assert.spy(bump.update).was.called_with(item1)
+          assert.spy(bump.update).was.called_with(item2)
+        end)
       end)
     end)
 

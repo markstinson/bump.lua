@@ -25,7 +25,7 @@ local aabb_getDisplacement, aabb_isIntersecting, aabb_getSegmentIntersection, aa
 
 local grid_getBox, grid_getBox2, grid_traverse = grid.getBox, grid.getBox2, grid.traverse
 
-local util_abs, util_newWeakTable, util_min = util.abs, util.newWeakTable, util.min
+local abs, newWeakTable, min = util.abs, util.newWeakTable, util.min
 
 --------------------------------------
 -- Private stuff
@@ -43,7 +43,7 @@ local function markCollisionAsHappened(item1,item2)
   collisionsHappened[item1][item2] = true
 end
 
-local function collideItem(item1)
+local function calculateItemCollisions(item1)
   local n1 = nodes_get(item1)
   if not n1 then return end
   cells_eachItemInBox(n1.al, n1.at, n1.aw, n1.ah, function(item2)
@@ -57,16 +57,14 @@ local function collideItem(item1)
       return
     end
 
-    local dx1,dy1,dx2,dy2,t = aabb_getDisplacement(n1.l,n1.t,n1.w,n1.h,
-                                                   n2.l,n2.t,n2.w,n2.h,
-                                                   n1.dx,n1.dy,
-                                                   n2.dx,n2.dy)
+    local dx1,dy1,dx2,dy2,t = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
+                                                   n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
     if t then
-      collisions[#collisions] = {
-        item1=item1, item2=item2,
-        dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2,
-        t=t
+      local col = { item1=item1, item2=item2,
+                    dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2,
+                    t=t
       }
+      collisions[#collisions + 1] = col
     end
   end)
 end
@@ -83,7 +81,7 @@ end
 
 local function recalculateItemCollisions(item)
   cancelItemCollisions(item)
-  collideItem(item)
+  calculateItemCollisions(item)
 end
 
 local function moveItem(item, hasMoved)
@@ -110,22 +108,40 @@ local function moveItem(item, hasMoved)
   return hasMoved
 end
 
-local function processCollision(col)
-  local item1,item2 = col.item1, col.item2
+local function popCollision()
+  local len = #collisions
+  local col = collisions[len]
+  collisions[len] = nil
+  return col
+end
 
-  bump.collision(item1, item2, col.dx1,col.dy1, col.dx2,col.dy2)
-  markCollisionAsHappened(item1, item2)
-
-  local item1Moved, item2Moved = moveItem(item1), moveItem(item2)
-  if item1Moved then recalculateItemCollisions(item1) end
-  if item2Moved then recalculateItemCollisions(item2) end
+local function collisionSorter(a,b)
+  if a.t == b.t then
+    local al = abs(a.dx1) + abs(a.dy1) + abs(a.dx2) + abs(a.dy2)
+    local bl = abs(b.dx1) + abs(b.dy1) + abs(b.dx2) + abs(b.dy2)
+    return al > bl
+  end
+  return a.t > b.t
 end
 
 local function processCollisions()
-  local _,col = next(collisions)
+  table.sort(collisions, collisionSorter)
+
+  local item1,item2,item1Moved,item2Moved
+  local col = popCollision()
   while col do
-    processCollision(col)
-    _,col = next(collisions)
+    item1,item2 = col.item1, col.item2
+
+    bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.t)
+    markCollisionAsHappened(item1, item2)
+
+    item1Moved = moveItem(item1)
+    item2Moved = moveItem(item2)
+    if item1Moved then recalculateItemCollisions(item1) end
+    if item2Moved then recalculateItemCollisions(item2) end
+    if item1Moved or item2Moved then table.sort(collisions, collisionSorter) end
+
+    col = popCollision()
   end
 end
 
@@ -254,7 +270,7 @@ function bump.collide(updateBefore)
   if updateBefore ~= false then bump_each(bump.update) end
 
   collisions, collisionsHappened = {}, {}
-  bump_each(collideItem)
+  bump_each(calculateItemCollisions)
   processCollisions()
   processCollisionEnds()
 
@@ -266,7 +282,7 @@ function bump.initialize(newCellSize)
   cellSize = newCellSize or defaultCellSize
   nodes.reset()
   cells.reset()
-  prevCollisions = util_newWeakTable()
+  prevCollisions = newWeakTable()
   collisions     = nil
 end
 
