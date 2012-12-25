@@ -1,5 +1,8 @@
 local aabb = require 'bump.aabb'
 
+local function xdescribe() end
+local function xit() end
+
 describe('bump.aabb', function()
   it('is a table', function()
     assert.equal(type(aabb), 'table')
@@ -40,15 +43,36 @@ describe('bump.aabb', function()
     end)
   end)
 
+  describe('.getPointDisplacement', function()
+    it('returns minimum displacement vector needed to move aabb so that it has the point on its perimeter', function()
+      -- point is inside aabb
+      assert.same({3,0}, {aabb.getPointDisplacement(0,0,10,10, 3,4)})
+      assert.same({0,4}, {aabb.getPointDisplacement(0,0,10,10, 6,4)})
+      assert.same({0,-5}, {aabb.getPointDisplacement(0,0,10,10, 5,5)})
+
+      -- point is outside aabb
+      assert.same({0,10}, {aabb.getPointDisplacement(0,0,10,10, 20,20)})
+      assert.same({0,15}, {aabb.getPointDisplacement(0,0,10,10, 30,25)})
+
+      -- point is in perimeter
+      assert.same({0,0}, {aabb.getPointDisplacement(0,0,10,10, 0,0)})
+
+    end)
+  end)
+
   describe('.getDisplacement', function()
-    it('returns the minimum & total displacement vector needed to move aabb1 out of aabb2', function()
-      assert.same({0,-6,-6,-6}, {aabb.getDisplacement(0,0,10,10, 4,4,10,10)})
-      assert.same({0,-4,-4,-4}, {aabb.getDisplacement(0,0,10,10, 6,6,10,10)})
-      assert.same({0,-5,-5,-5}, {aabb.getDisplacement(0,0,10,10, 5,5,10,10)})
+
+    describe('when the two aabbs are relatively static', function()
+      it('returns the minimum & total displacement vector needed to move aabb1 out of aabb2', function()
+        assert.same({0,-6, 0,0,0}, {aabb.getDisplacement(0,0,10,10,0,0, 4,4,10,10, 0,0)})
+        assert.same({0,-4, 0,0,0}, {aabb.getDisplacement(0,0,10,10,0,0, 6,6,10,10, 0,0)})
+        assert.same({0,-5, 0,0,0}, {aabb.getDisplacement(0,0,10,10,0,0, 5,5,10,10, 0,0)})
+      end)
+      it('returns nil if the two aabbs are not intersecting', function()
+        assert.empty({aabb.getDisplacement(0,0,10,10,0,0, 20,20,10,10,0,0)})
+      end)
     end)
-    it('returns nil if the two aabbs are not intersecting', function()
-      assert.Nil(aabb.getDisplacement(0,0,10,10, 20,20,10,10))
-    end)
+
   end)
 
   describe('.getRayIntersection', function()
@@ -71,6 +95,15 @@ describe('bump.aabb', function()
     end)
     it('returns 2 points if the segment goes through the aabb', function()
       assert.same({0,10, 20,10}, {aabb.getSegmentIntersection(0,0,20,20, -10,10, 30,10)})
+    end)
+  end)
+
+  describe('.getCenter', function()
+    it("returns the center of an aabb", function()
+      assert.same({0,0}, {aabb.getCenter(0,0,0,0)})
+      assert.same({1,1}, {aabb.getCenter(0,0,2,2)})
+      assert.same({2,0}, {aabb.getCenter(0,0,4,0)})
+      assert.same({1,3}, {aabb.getCenter(0,0,2,6)})
     end)
   end)
 end)

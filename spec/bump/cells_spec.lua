@@ -12,14 +12,15 @@ describe("bump.cells", function()
 
   describe(".create", function()
     it("adds 1 cell if given a x,y coordinate", function()
-      cells.create(1,1)
+      local cell = cells.create(1,1) -- store reference so that it's not gc'ed
       assert.equal(1, cells.count())
     end)
   end)
 
   describe(".getOrCreate", function()
     it("creates a new cell if it does not exist", function()
-      cells.getOrCreate(1,1)
+      -- need to store the cell in a variable so it is not gc'ed
+      local cell = cells.getOrCreate(1,1)
       assert.equal(1, cells.count())
     end)
     it("returns the existing cell if it exists", function()

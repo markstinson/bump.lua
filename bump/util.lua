@@ -26,4 +26,7 @@ function util.nearest(x, a, b)
   return abs(a - x) < abs(b - x) and a or b
 end
 
+function util.min(a,b) return a < b and a or b end
+function util.max(a,b) return a > b and a or b end
+
 return util

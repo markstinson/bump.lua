@@ -3,7 +3,8 @@ local aabb = {}
 local path = (...):gsub("%.aabb$","")
 local util       = require(path .. '.util')
 
-local abs, nearest = util.abs, util.nearest
+local abs, nearest  = util.abs, util.nearest
+local inf           = math.huge
 
 local function liangBarsky(l,t,w,h, x1,y1,x2,y2, t0,t1)
   local dx, dy  = x2-x1, y2-y1
@@ -62,14 +63,33 @@ function aabb.getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
 end
 local getMinkowskyDiff = aabb.getMinkowskyDiff
 
-function aabb.getDisplacement(l1,t1,w1,h1, l2,t2,w2,h2)
+function aabb.getPointDisplacement(l,t,w,h, x,y)
+  local px, py = getNearestPointInPerimeter(l,t,w,h, x,y)
+  local dx, dy = x-px, y-py
+  if abs(dx) < abs(dy) then return dx,0 end
+  return 0,dy
+end
+local getPointDisplacement = aabb.getPointDisplacement
+
+function aabb.getDisplacement(l1,t1,w1,h1,dx1,dy1, l2,t2,w2,h2,dx2,dy2)
+  local t
+  local dx, dy  = dx1 - dx2, dy1 - dy2
   local l,t,w,h = getMinkowskyDiff(l1,t1,w1,h1, l2,t2,w2,h2)
-  if not containsPoint(l,t,w,h, 0,0) then return nil end
 
-  local dx, dy  = getNearestPointInPerimeter(l,t,w,h, 0,0)
-  if abs(dx) < abs(dy) then return dx,0,dx,dy end
+  if containsPoint(l,t,w,h, 0,0) then
+    if dx == 0 and dy == 0 then
+      dx, dy  = getNearestPointInPerimeter(l,t,w,h, 0,0)
+      if abs(dx) < abs(dy) then return dx, 0, 0, 0, 0 end
+      return 0, dy, 0, 0, 0
+    end
 
-  return 0,dy,dx,dy
+    local t0, t1 = liangBarsky(l,t,w,h, 0,0,dx,dy, -inf, inf)
+    t = abs(t0) < abs(t1) and t0 or t1
+  else
+    t = liangBarsky(l,t,w,h, 0,0,dx,dy, 0,1)
+  end
+
+  if t then return dx1*t, dy1*t, dx2*t, dy2*t, t end
 end
 
 function aabb.getSegmentIntersection(l,t,w,h, x1,y1,x2,y2)
@@ -78,6 +98,10 @@ end
 
 function aabb.getRayIntersection(l,t,w,h, x1,y1,x2,y2)
   return liangBarskyIntersections(l,t,w,h, x1,y1,x2,y1, 0,math.huge)
+end
+
+function aabb.getCenter(l,t,w,h)
+  return l+w*0.5, t+h*0.5
 end
 
 return aabb
