@@ -117,9 +117,9 @@ end
 
 local function collisionSorter(a,b)
   if a.t == b.t then
-    local al = abs(a.dx1) + abs(a.dy1) + abs(a.dx2) + abs(a.dy2)
-    local bl = abs(b.dx1) + abs(b.dy1) + abs(b.dx2) + abs(b.dy2)
-    return al > bl
+    a.l = a.l or abs(a.dx1) + abs(a.dy1) + abs(a.dx2) + abs(a.dy2)
+    b.l = b.l or abs(b.dx1) + abs(b.dy1) + abs(b.dx2) + abs(b.dy2)
+    return a.l > b.l
   end
   return a.t > b.t
 end
