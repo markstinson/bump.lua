@@ -31,16 +31,16 @@ local abs, newWeakTable, min = util.abs, util.newWeakTable, util.min
 -- Private stuff
 
 local defaultCellSize = 64
-local cellSize, collisions, collisionsHappened, prevCollisions
+local cellSize, collisions, collisionsVisited, prevCollisions
 
-local function collisionHasHappened(item1, item2)
-  return (collisionsHappened[item1] and collisionsHappened[item1][item2]) or
-         (collisionsHappened[item2] and collisionsHappened[item2][item1])
+local function collisionIsVisited(item1, item2)
+  return (collisionsVisited[item1] and collisionsVisited[item1][item2]) or
+         (collisionsVisited[item2] and collisionsVisited[item2][item1])
 end
 
-local function markCollisionAsHappened(item1,item2)
-  collisionsHappened[item1]        = collisionsHappened[item1] or {}
-  collisionsHappened[item1][item2] = true
+local function markCollisionAsVisited(item1,item2)
+  collisionsVisited[item1]        = collisionsVisited[item1] or {}
+  collisionsVisited[item1][item2] = true
 end
 
 local function calculateItemCollisions(item1)
@@ -51,7 +51,7 @@ local function calculateItemCollisions(item1)
 
     local n2 = nodes_get(item2)
     if not n2
-    or collisionHasHappened(item1, item2)
+    or collisionIsVisited(item1, item2)
     or not bump.shouldCollide(item1, item2)
     then
       return
@@ -65,6 +65,7 @@ local function calculateItemCollisions(item1)
                     t=t
       }
       collisions[#collisions + 1] = col
+      markCollisionAsVisited(item1, item2)
     end
   end)
 end
@@ -133,7 +134,6 @@ local function processCollisions()
     item1,item2 = col.item1, col.item2
 
     bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.t)
-    markCollisionAsHappened(item1, item2)
 
     item1Moved = moveItem(item1)
     item2Moved = moveItem(item2)
@@ -269,7 +269,7 @@ end
 function bump.collide(updateBefore)
   if updateBefore ~= false then bump_each(bump.update) end
 
-  collisions, collisionsHappened = {}, {}
+  collisions, collisionsVisited = {}, {}
   bump_each(calculateItemCollisions)
   processCollisions()
   processCollisionEnds()

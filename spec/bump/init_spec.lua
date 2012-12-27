@@ -347,7 +347,7 @@ describe("bump", function()
 
       describe("When items don't move relatively", function()
 
-        it("is called once if two items collide", function()
+        it("is called if two items collide", function()
           local item1 = {l=0,t=0,w=10,h=10, name='item1'}
           local item2 = {l=4,t=4,w=10,h=10, name='item2'}
           bump.add(item1, item2)
@@ -355,6 +355,19 @@ describe("bump", function()
 
           bump.collide()
           assert.same({{'item1', 'item2',0,-6,0,0,0}}, collisions)
+        end)
+
+        it("is called only once per pair (not twice)", function()
+          local counter = 0
+          bump.collision = function() counter = counter + 1 end
+
+          local item1 = {l=0,t=0,w=10,h=10, name='item1'}
+          local item2 = {l=4,t=4,w=10,h=10, name='item2'}
+          bump.add(item1, item2)
+
+          bump.collide()
+          assert.equals(counter,1)
+
         end)
 
         it("invokes collisions with less displacement first", function()
@@ -377,17 +390,16 @@ describe("bump", function()
       describe("When items move", function()
 
         describe("And they are already intersecting", function()
-          it("can throw already intersecting item forward", function()
+          it("can throw already intersecting item forwards", function()
             local item1 = {l=1,t=1,w=10,h=10, name='item1'}
             local item2 = {l=2,t=2,w=10,h=10, name='item2'}
             bump.add(item1, item2)
             bump.shouldCollide = function(a,b) return a == item1 end
 
-            item1.l = 10
-            bump.update(item1)
+            item1.l = 5
 
             bump.collide()
-            assert.same({{'item1','item2',2,0,0,0,0}}, collisions)
+            assert.same({{'item1','item2',7,0,0,0,-1.75}}, collisions)
           end)
 
           it("can throw already intersecting item backwards", function()
@@ -416,7 +428,21 @@ describe("bump", function()
             assert.same({{'item1','item2',-5,-5,5,5, 0.25}}, collisions)
           end)
 
-          pending("fires intersections sorted by t", function()
+          it("fires intersections sorted by t", function()
+            local item1 = {l=0, t=0,  w=10,h=10, name='item1'}
+            local item2 = {l=20,t=20, w=20,h=10, name='item2'}
+            local item3 = {l=40,t=10, w=30,h=10, name='item3'}
+            bump.add(item1, item2, item3)
+
+            item1.l, item1.t = 30,10
+            item2.l, item2.t = 10,25
+            item3.l, item3.t = 30,20
+
+            bump.collide()
+            assert.same({
+              {'item3','item1',2.5,-2.5,-7.5,-2.5,0.25},
+              {'item2','item3',10,-5,10,-10,1}
+            }, collisions)
 
           end)
         end)
