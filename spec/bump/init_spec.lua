@@ -1,8 +1,5 @@
 require 'spec.assert_has_value'
 
-local function xit() end
-local function xdescribe() end
-
 local bump = require 'bump.init'
 
 describe("bump", function()
@@ -449,7 +446,7 @@ describe("bump", function()
       end)
     end)
 
-    xdescribe("when bump.collide triggers the removal of one item", function()
+    describe("when bump.collide triggers the removal of one item", function()
       local item1, item2, item3, item4
       before_each(function()
         item1 = {l=1,t=1,w=10,h=10, name='item1'}
@@ -477,7 +474,7 @@ describe("bump", function()
     end)
   end)
 
-  xdescribe(".shouldCollide", function()
+  describe(".shouldCollide", function()
     it("returns true by default", function()
       assert.truthy(bump.shouldCollide())
     end)
@@ -502,7 +499,7 @@ describe("bump", function()
     end)
   end)
 
-  xdescribe('.endCollision', function()
+  describe('.endCollision', function()
     local endedCollisions
     before_each(function()
       endedCollisions = {}

@@ -39,7 +39,7 @@ local function collisionIsVisited(item1, item2)
 end
 
 local function markCollisionAsVisited(item1,item2)
-  collisionsVisited[item1]        = collisionsVisited[item1] or {}
+  collisionsVisited[item1]        = collisionsVisited[item1] or newWeakTable()
   collisionsVisited[item1][item2] = true
 end
 
@@ -269,12 +269,12 @@ end
 function bump.collide(updateBefore)
   if updateBefore ~= false then bump_each(bump.update) end
 
-  collisions, collisionsVisited = {}, {}
+  collisions, collisionsVisited = {}, newWeakTable()
   bump_each(calculateItemCollisions)
   processCollisions()
   processCollisionEnds()
 
-  prevCollisions = collisions
+  prevCollisions = collisionsVisited
 end
 
 -- This resets the library. You can use it to change the cell size, if you want
