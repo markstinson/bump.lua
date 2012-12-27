@@ -10,8 +10,11 @@ local util       = require(path .. '.util')
 
 local store      -- (private) holds the list of created nodes
 
-function nodes.add(item, l,t,w,h, gl,gt,gw,gh)
-  store[item] = {l=l,t=t,w=w,h=h, gl=gl,gt=gt,gw=gw,gh=gh}
+function nodes.add(item, l,t,w,h, al,at,aw,ah)
+  store[item] = {l=l,t=t,w=w,h=h,
+                 pl=l,pt=t,pw=w,ph=h,
+                 al=al,at=at,aw=aw,ah=ah,
+                 dx=0,dy=0}
 end
 
 function nodes.get(item)
@@ -30,11 +33,6 @@ end
 
 function nodes.remove(item)
   store[item] = nil
-end
-
-function nodes.update(item, l,t,w,h, gl,gt,gw,gh)
-  local n = store[item]
-  n.l,n.t,n.w,n.h,n.gl,n.gt,n.gw,n.gh = l,t,w,h, gl,gt,gw,gh
 end
 
 function nodes.each(callback)

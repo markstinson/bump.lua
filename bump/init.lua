@@ -20,67 +20,140 @@ local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
 local cells_eachItemInBox, cells_add, cells_remove, cells_get =
       cells.eachItemInBox, cells.add, cells.remove, cells.get
 
-local aabb_getDisplacement, aabb_isIntersecting, aabb_getSegmentIntersection =
-      aabb.getDisplacement, aabb.isIntersecting, aabb.getSegmentIntersection
+local aabb_getDisplacement, aabb_isIntersecting, aabb_getSegmentIntersection, aabb_getCenter =
+      aabb.getDisplacement, aabb.isIntersecting, aabb.getSegmentIntersection, aabb.getCenter
 
-local grid_getBox, grid_traverse = grid.getBox, grid.traverse
+local grid_getBox, grid_getBox2, grid_traverse = grid.getBox, grid.getBox2, grid.traverse
 
-local util_abs, util_newWeakTable = util.abs, util.newWeakTable
+local abs, newWeakTable, min = util.abs, util.newWeakTable, util.min
 
 --------------------------------------
 -- Private stuff
 
 local defaultCellSize = 64
-local cellSize, collisions, prevCollisions
+local cellSize, collisions, collisionsVisited, prevCollisions
 
-local function _getBiggestIntersection(item, visited)
-  local ni = nodes_get(item)
-  if not ni then return end
-  local nNeighbor, nMdx, nMdy, nDx, nDy, nArea = nil, 0,0,0,0,0
-  local nn, mdx, mdy, dx, dy, area
-  local compareNeighborIntersection = function(neighbor)
-    if item == neighbor or not bump.shouldCollide(item, neighbor) then return end
-    nn = nodes_get(neighbor)
-    if not aabb_isIntersecting(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h) then return end
+local function collisionIsVisited(item1, item2)
+  return (collisionsVisited[item1] and collisionsVisited[item1][item2]) or
+         (collisionsVisited[item2] and collisionsVisited[item2][item1])
+end
 
-    mdx, mdy, dx, dy = aabb_getDisplacement(ni.l, ni.t, ni.w, ni.h, nn.l, nn.t, nn.w, nn.h)
-    area = util_abs(dx*dy)
-    if area > nArea then
-      nNeighbor, nArea, nMdx, nMdy, nDx, nDy = neighbor, area, mdx, mdy, dx, dy
+local function markCollisionAsVisited(item1,item2)
+  collisionsVisited[item1]        = collisionsVisited[item1] or newWeakTable()
+  collisionsVisited[item1][item2] = true
+end
+
+local function calculateItemCollisions(item1)
+  local n1 = nodes_get(item1)
+  if not n1 then return end
+  cells_eachItemInBox(n1.al, n1.at, n1.aw, n1.ah, function(item2)
+    if item2 == item1 then return end
+
+    local n2 = nodes_get(item2)
+    if not n2
+    or collisionIsVisited(item1, item2)
+    or not bump.shouldCollide(item1, item2)
+    then
+      return
+    end
+
+    local dx1,dy1,dx2,dy2,t = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
+                                                   n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
+    if t then
+      local col = { item1=item1, item2=item2,
+                    dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2,
+                    t=t
+      }
+      collisions[#collisions + 1] = col
+      markCollisionAsVisited(item1, item2)
+    end
+  end)
+end
+
+local function cancelItemCollisions(item)
+  local col = nil
+  for i = #collisions, 1, -1 do
+    col = collisions[i]
+    if col.item1 == item or col.item2 == item then
+      table.remove(collisions, i)
     end
   end
-  cells_eachItemInBox(ni.gl, ni.gt, ni.gw, ni.gh, compareNeighborIntersection, visited)
-  return nNeighbor, nMdx, nMdy, nDx, nDy
 end
 
-local function _collideItemWithNeighbors(item)
-  local ni = nodes_get(item)
-  local visited = {}
-  local neighbor, mdx, mdy, dx, dy
-  repeat
-    neighbor, mdx, mdy, dx, dy = _getBiggestIntersection(item, visited)
-    if neighbor then
-      if collisions[neighbor] and collisions[neighbor][item] then return end
+local function recalculateItemCollisions(item)
+  cancelItemCollisions(item)
+  calculateItemCollisions(item)
+end
 
-      local nn = nodes_get(neighbor)
+local function moveItem(item, hasMoved)
+  local n = nodes_get(item)
+  if not n then return end
 
-      bump.collision(item, neighbor, mdx, mdy, dx, dy)
-
-      bump.update(item)
-      bump.update(neighbor)
-
-      collisions[item] = collisions[item] or util_newWeakTable()
-      collisions[item][neighbor] = true
-
-      if prevCollisions[item] then prevCollisions[item][neighbor] = nil end
-
-      visited[neighbor] = true
+  local l,t,w,h = bump.getBBox(item)
+  if hasMoved or n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
+    hasMoved = true
+    local gl,gt,gw,gh     = grid_getBox(cellSize, l,t,w,h)
+    local pgl,pgt,pgw,pgh = grid_getBox(cellSize, n.pl,n.pt,n.pw,n.ph)
+    local al,at,aw,ah     = grid_getBox2(gl,gt,gw,gh, pgl,pgt,pgw,pgh)
+    if n.al ~= al or n.at ~= at or n.aw ~= aw or n.ah ~= ah then
+      cells_remove(item, n.al, n.at, n.aw, n.ah)
+      cells_add(item, al, at, aw, ah)
+      n.al, n.at, n.aw, n.ah = al,at,aw,ah
     end
-  until not neighbor
+  end
+
+  local cx, cy   = aabb_getCenter(l, t, w, h)
+  local pcx, pcy = aabb_getCenter(n.pl, n.pt, n.pw, n.ph)
+  n.l,n.t,n.w,n.h, n.dx,n.dy = l,t,w,h, pcx-cx, pcy-cy
+
+  return hasMoved
 end
 
-local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
+local function popCollision()
+  local len = #collisions
+  local col = collisions[len]
+  collisions[len] = nil
+  return col
+end
 
+local function collisionSorter(a,b)
+  if a.t == b.t then
+    a.l = a.l or abs(a.dx1) + abs(a.dy1) + abs(a.dx2) + abs(a.dy2)
+    b.l = b.l or abs(b.dx1) + abs(b.dy1) + abs(b.dx2) + abs(b.dy2)
+    return a.l > b.l
+  end
+  return a.t > b.t
+end
+
+local function processCollisions()
+  table.sort(collisions, collisionSorter)
+
+  local item1,item2,item1Moved,item2Moved
+  local col = popCollision()
+  while col do
+    item1,item2 = col.item1, col.item2
+
+    bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.t)
+
+    item1Moved = moveItem(item1)
+    item2Moved = moveItem(item2)
+    if item1Moved then recalculateItemCollisions(item1) end
+    if item2Moved then recalculateItemCollisions(item2) end
+    if item1Moved or item2Moved then table.sort(collisions, collisionSorter) end
+
+    col = popCollision()
+  end
+end
+
+local function processCollisionEnds()
+  for item,neighbors in pairs(prevCollisions) do
+    for neighbor,_ in pairs(neighbors) do
+      bump.endCollision(item, neighbor)
+    end
+  end
+end
+
+function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
   local intersections, len = {}, 0
   local n, ix1,iy1,ix2,iy2, dx,dy
 
@@ -101,13 +174,6 @@ local function _getCellSegmentIntersections(cell, x1,y1,x2,y2)
   return intersections, len
 end
 
-local function _triggerEndCollisions()
-  for item,neighbors in pairs(prevCollisions) do
-    for neighbor,_ in pairs(neighbors) do
-      bump.endCollision(item, neighbor)
-    end
-  end
-end
 
 local function _sortByD(a,b) return a.d < b.d end
 
@@ -137,26 +203,18 @@ function bump.remove(item)
   assert(item, "item expected, got nil")
   local node = nodes_get(item)
   if node then
-    cells_remove(item, node.gl, node.gt, node.gw, node.gh)
+    cells_remove(item, node.al, node.at, node.aw, node.ah)
     nodes_remove(item)
   end
 end
 
 -- Updates the cached information that bump has about an item (bounding boxes, etc)
 function bump.update(item)
-  assert(item, "item expected, got nil")
   local n = nodes_get(item)
-  if not n then return end
-  local l,t,w,h = bump.getBBox(item)
-  if n.l ~= l or n.t ~= t or n.w ~= w or n.h ~= h then
-
-    local gl,gt,gw,gh = grid_getBox(cellSize, l,t,w,h)
-    if n.gl ~= gl or n.gt ~= gt or n.gw ~= gw or n.gh ~= gh then
-      cells_remove(item, n.gl, n.gt, n.gw, n.gh)
-      cells_add(item, gl, gt, gw, gh)
-    end
-
-    nodes_update(item, l,t,w,h, gl,gt,gw,gh)
+  if n then
+    local hasMoved = n.pl ~= n.l or n.pt ~= n.t or n.pw ~= n.w or n.ph ~= n.h
+    n.pl, n.pt, n.pw, n.ph = n.l, n.t, n.w, n.h
+    moveItem(item, hasMoved)
   end
 end
 
@@ -211,22 +269,12 @@ end
 function bump.collide(updateBefore)
   if updateBefore ~= false then bump_each(bump.update) end
 
-  collisions = util_newWeakTable()
-  bump_each(_collideItemWithNeighbors)
-  _triggerEndCollisions()
+  collisions, collisionsVisited = {}, newWeakTable()
+  bump_each(calculateItemCollisions)
+  processCollisions()
+  processCollisionEnds()
 
-  prevCollisions = collisions
-end
-
-function bump.collideInRegion(l,t,w,h, updateBefore)
-  local gl,gt,gw,gh = grid_getBox(l,t,w,h)
-  if updateBefore ~= false then cells_eachItemInBox(gl,gt,gw,gh, bump.update) end
-
-  collisions = util_newWeakTable()
-  cells_eachItemInBox(gl,gt,gw,gh, _collideItemWithNeighbors)
-  _triggerEndCollisions()
-
-  prevCollisions = collisions
+  prevCollisions = collisionsVisited
 end
 
 -- This resets the library. You can use it to change the cell size, if you want
@@ -234,7 +282,7 @@ function bump.initialize(newCellSize)
   cellSize = newCellSize or defaultCellSize
   nodes.reset()
   cells.reset()
-  prevCollisions = util_newWeakTable()
+  prevCollisions = newWeakTable()
   collisions     = nil
 end
 

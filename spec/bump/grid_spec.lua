@@ -17,6 +17,14 @@ describe('bump.grid', function()
     end)
   end)
 
+  describe(".getBox2", function()
+    it("returns the l,t,w,h of the smallest grid box containing the two given gridboxes", function()
+      assert.same({1,1,0,0},  {grid.getBox2(1,1,0,0, 1,1,0,0)})
+      assert.same({1,1,2,2},  {grid.getBox2(1,1,0,0, 3,3,0,0)})
+      assert.same({-1,0,2,3}, {grid.getBox2(2,3,1,1, -1,0,2,2)})
+    end)
+  end)
+
   describe(".traverse", function()
     local line
     function draw(x,y)

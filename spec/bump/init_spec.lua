@@ -65,7 +65,16 @@ describe("bump", function()
       local item = {l=1, t=1, w=70, h=70}
       bump.add(item)
       local n = bump.nodes.get(item)
-      assert.same({1,1,70,70,1,1,1,1}, {n.l,n.t,n.w,n.h, n.gl,n.gt,n.gw,n.gh})
+      assert.same({ 1,1,70,70,
+                    1,1,70,70,
+                    1,1,1,1,
+                    0,0
+                   }, {
+                     n.l,n.t,n.w,n.h,
+                     n.pl,n.pt,n.pw,n.ph,
+                     n.al,n.at,n.aw,n.ah,
+                     n.dx,n.dy
+                   })
     end)
 
     it("can add more than one item in one go", function()
@@ -100,10 +109,6 @@ describe("bump", function()
 
   describe(".update", function()
 
-    it("raises an error if nil is passed", function()
-      assert.error(function() bump.update() end)
-    end)
-
     it("does nothing if the bbox has not changed", function()
       local item = {l=1, t=2, w=3, h=4}
       bump.add(item)
@@ -114,25 +119,55 @@ describe("bump", function()
       assert.spy(bump.cells.remove).was_not_called()
     end)
 
-    it("updates the node if the bbox has changed", function()
+    it("updates the previous position even if the item has not moved", function()
       local item = {l=1, t=2, w=3, h=4}
       bump.add(item)
-      local node = bump.nodes.get(item)
-      item.w, item.h = 70,70
+      item.l, item.t, item.w, item.h = 5,6,7,8
       bump.update(item)
+      bump.update(item)
+      local n = bump.nodes.get(item)
+      assert.same({ n.pl, n.pt, n.pw, n.ph, n.dx, n.dy }, {5,6,7,8, 0,0})
+    end)
+
+    it("updates the node if the bbox has changed", function()
+      local item = {l=0, t=0, w=1, h=1}
+      bump.add(item)
       local node = bump.nodes.get(item)
-      assert.same({node.w, node.h, node.gw, node.gh}, {70,70,1,1})
+      item.l, item.t, item.w, item.h = 10,20,70,70
+      bump.update(item)
+      local n = bump.nodes.get(item)
+      assert.same({ n.l, n.t, n.w, n.h },     { 10, 20, 70, 70 })
+      assert.same({ n.pl, n.pt, n.pw, n.ph }, {  0,  0,  1,  1 })
+      assert.same({ n.al, n.at, n.aw, n.ah }, {  1,  1,  1,  1 })
+      assert.same({ n.dx, n.dy },             { -44.5, -54.5 })
     end)
 
     it("updates the cells if the grid bbox has changed", function()
       local item = {l=1, t=2, w=3, h=4}
+
       bump.add(item)
+      assert.truthy(bump.cells.getOrCreate(1,1).items[item])
+
       item.l, item.t, item.w, item.h = 100, 100, 60, 60
       bump.update(item)
-      assert.falsy(bump.cells.getOrCreate(1,1).items[item])
-
+      assert.truthy(bump.cells.getOrCreate(1,1).items[item])
+      assert.truthy(bump.cells.getOrCreate(1,2).items[item])
+      assert.truthy(bump.cells.getOrCreate(1,3).items[item])
+      assert.truthy(bump.cells.getOrCreate(2,1).items[item])
       assert.truthy(bump.cells.getOrCreate(2,2).items[item])
       assert.truthy(bump.cells.getOrCreate(2,3).items[item])
+      assert.truthy(bump.cells.getOrCreate(3,1).items[item])
+      assert.truthy(bump.cells.getOrCreate(3,2).items[item])
+      assert.truthy(bump.cells.getOrCreate(3,3).items[item])
+
+      bump.update(item)
+      assert.falsy( bump.cells.getOrCreate(1,1).items[item])
+      assert.falsy( bump.cells.getOrCreate(1,2).items[item])
+      assert.falsy( bump.cells.getOrCreate(1,3).items[item])
+      assert.falsy( bump.cells.getOrCreate(2,1).items[item])
+      assert.truthy(bump.cells.getOrCreate(2,2).items[item])
+      assert.truthy(bump.cells.getOrCreate(2,3).items[item])
+      assert.falsy( bump.cells.getOrCreate(3,1).items[item])
       assert.truthy(bump.cells.getOrCreate(3,2).items[item])
       assert.truthy(bump.cells.getOrCreate(3,3).items[item])
     end)
@@ -297,8 +332,8 @@ describe("bump", function()
       local collisions
       before_each(function()
         collisions = {}
-        bump.collision = function(item1, item2, mdx, mdy, dx, dy)
-          collisions[#collisions + 1] = {first=item1.name, second=item2.name, dx=dx, dy=dy}
+        bump.collision = function(i1,i2, dx1, dy1, dx2, dy2, t)
+          collisions[#collisions + 1] = {i1.name, i2.name, dx1, dy1, dx2, dy2, t}
         end
       end)
 
@@ -307,40 +342,107 @@ describe("bump", function()
         assert.empty(collisions)
       end)
 
-      it("is called once if two items collide", function()
-        local item1 = {l=0,t=0,w=10,h=10, name='item1'}
-        local item2 = {l=5,t=5,w=10,h=10, name='item2'}
-        bump.add(item1, item2)
-        bump.collide()
-        assert.same({{first='item1', second='item2',dx=-5,dy=-5}}, collisions)
+      describe("When items don't move relatively", function()
+
+        it("is called if two items collide", function()
+          local item1 = {l=0,t=0,w=10,h=10, name='item1'}
+          local item2 = {l=4,t=4,w=10,h=10, name='item2'}
+          bump.add(item1, item2)
+          bump.shouldCollide = function(a,b) return a == item1 end
+
+          bump.collide()
+          assert.same({{'item1', 'item2',0,-6,0,0,0}}, collisions)
+        end)
+
+        it("is called only once per pair (not twice)", function()
+          local counter = 0
+          bump.collision = function() counter = counter + 1 end
+
+          local item1 = {l=0,t=0,w=10,h=10, name='item1'}
+          local item2 = {l=4,t=4,w=10,h=10, name='item2'}
+          bump.add(item1, item2)
+
+          bump.collide()
+          assert.equals(counter,1)
+
+        end)
+
+        it("invokes collisions with less displacement first", function()
+          local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+          local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+          local item3 = {l=3,t=3,w=10,h=10, name='item3'}
+          local item4 = {l=4,t=4,w=10,h=10, name='item4'}
+          bump.add(item1, item2, item3, item4)
+          bump.shouldCollide = function(a,b) return a == item1 end
+
+          bump.collide()
+          assert.same({
+            {'item1','item4',0,-7,0,0,0},
+            {'item1','item3',0,-8,0,0,0},
+            {'item1','item2',0,-9,0,0,0}
+          }, collisions)
+        end)
       end)
 
-      it("sorts collisions by area of intersection", function()
-        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
-        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
-        local item3 = {l=3,t=3,w=10,h=10, name='item3'}
-        local item4 = {l=4,t=4,w=10,h=10, name='item4'}
-        bump.add(item1, item2, item3, item4)
+      describe("When items move", function()
 
-        bump.shouldCollide = function(a,b) return a == item1 end
+        describe("And they are already intersecting", function()
+          it("can throw already intersecting item forwards", function()
+            local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+            local item2 = {l=2,t=2,w=10,h=10, name='item2'}
+            bump.add(item1, item2)
+            bump.shouldCollide = function(a,b) return a == item1 end
 
-        bump.collide(item1)
-        assert.same({
-          {first='item1', second='item2',dx=-9,dy=-9},
-          {first='item1', second='item3',dx=-8,dy=-8},
-          {first='item1', second='item4',dx=-7,dy=-7}
-        }, collisions)
-      end)
+            item1.l = 5
 
-      it("updates every colliding pair of items", function()
-        local item1 = {l=1,t=1,w=10,h=10, name='item1'}
-        local item2 = {l=2,t=2,w=10,h=10, name='item2'}
-        bump.add(item1, item2)
-        spy.on(bump, "update")
+            bump.collide()
+            assert.same({{'item1','item2',7,0,0,0,-1.75}}, collisions)
+          end)
 
-        bump.collide()
-        assert.spy(bump.update).was.called_with(item1)
-        assert.spy(bump.update).was.called_with(item2)
+          it("can throw already intersecting item backwards", function()
+            local item1 = {l=1,t=1,w=10,h=10, name='item1'}
+            local item2 = {l=2,t=2,w=40,h=10, name='item2'}
+            bump.add(item1, item2)
+            bump.shouldCollide = function(a,b) return a == item1 end
+
+            item1.l = 10
+
+            bump.collide()
+            assert.same({{'item1','item2',-18,0,0,0,2}}, collisions)
+          end)
+        end)
+
+        describe("When they are not already intersecting", function()
+          it("throws both items backwards a little, if both were moving", function()
+            local item1 = {l=0, t=0,  w=10,h=10, name='item1'}
+            local item2 = {l=20,t=20, w=10,h=10, name='item2'}
+            bump.add(item1, item2)
+            bump.shouldCollide = function(a,b) return a == item1 end
+
+            item1.l, item1.t, item2.l, item2.t = 20,20, 0,0
+
+            bump.collide()
+            assert.same({{'item1','item2',-5,-5,5,5, 0.25}}, collisions)
+          end)
+
+          it("fires intersections sorted by t", function()
+            local item1 = {l=0, t=0,  w=10,h=10, name='item1'}
+            local item2 = {l=20,t=20, w=20,h=10, name='item2'}
+            local item3 = {l=40,t=10, w=30,h=10, name='item3'}
+            bump.add(item1, item2, item3)
+
+            item1.l, item1.t = 30,10
+            item2.l, item2.t = 10,25
+            item3.l, item3.t = 30,20
+
+            bump.collide()
+            assert.same({
+              {'item3','item1',2.5,-2.5,-7.5,-2.5,0.25},
+              {'item2','item3',10,-5,10,-10,1}
+            }, collisions)
+
+          end)
+        end)
       end)
     end)
 
@@ -368,13 +470,6 @@ describe("bump", function()
           bump.remove(item2)
         end
         assert.Not.error(bump.collide)
-      end)
-    end)
-
-    describe("bump.collideInRegion", function()
-      it("works the same as collide, but only on the specified region", function()
-        -- I don't feel like testing all this.
-        assert.truthy(true)
       end)
     end)
   end)
