@@ -2,7 +2,7 @@ local bump       = require 'bump'
 local bump_debug = require 'bump_debug'
 
 local maxdt       = 0.1    -- if the window loses focus/etc, use this instead of dt
-local drawDebug   = false  -- draw bump's debug info, fps and memory
+local drawDebug   = true  -- draw bump's debug info, fps and memory
 local instructions = [[
   bump.lua simple demo
 
@@ -71,12 +71,8 @@ end
 -- bump config
 
 -- When a collision occurs, call collideWithBlock with the appropiate parameters
-function bump.collision(obj1, obj2, mdx, mdy, dx, dy)
-  if obj1 == player then
-    collidePlayerWithBlock(obj2,mdx,mdy)
-  elseif obj2 == player then
-    collidePlayerWithBlock(obj1,-mdx,-mdy)
-  end
+function bump.collision(obj1, obj2, dx1, dy1, dx2, dy2, t)
+  collidePlayerWithBlock(obj2,dx1,dy1)
 end
 
 function bump.endCollision(obj1, obj2)
@@ -89,7 +85,7 @@ end
 
 -- only the player collides with stuff. Blocks don't collide with themselves
 function bump.shouldCollide(obj1, obj2)
-  return obj1 == player or obj2 == player
+  return obj1 == player
 end
 
 -- return the bounding box of an object - the player or a block

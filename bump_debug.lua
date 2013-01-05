@@ -16,14 +16,12 @@ end
 local function _drawCell(cell)
   local l,t,w,h   = _getCellBoundingBox(cell.gx, cell.gy)
   local count = _countItems(cell)
-  local intensity = count * 40 + 30
-  love.graphics.setColor(intensity, intensity, intensity)
   love.graphics.print(count, l+12, t+12)
   love.graphics.rectangle('line', l,t,w,h)
 end
 
 function bump_debug.draw(l,t,w,h)
-  bump.cells.each(_drawCell, bump.geom.gridBox(bump.getCellSize(), l,t,w,h))
+  bump.cells.each(_drawCell, bump.grid.getBox(bump.getCellSize(), l,t,w,h))
 end
 
 return bump_debug
