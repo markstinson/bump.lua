@@ -45,8 +45,10 @@ function aabb.isIntersecting(l1,t1,w1,h1, l2,t2,w2,h2)
   return l1 < l2+w2 and l1+w1 > l2 and t1 < t2+h2 and t1+h1 > t2
 end
 
+-- returns true if an aabb contains a point (returns false if the box "touches" the point but does not contain
+-- it, i.e. the point is right in the aabb frontier)
 function aabb.containsPoint(l,t,w,h, x,y)
-  return not(x < l or y < t or x > l + w or y > t + h)
+  return x > l and y > t and x < l + w and y < t + h
 end
 local containsPoint = aabb.containsPoint
 
@@ -87,6 +89,9 @@ function aabb.getDisplacement(l1,t1,w1,h1,dx1,dy1, l2,t2,w2,h2,dx2,dy2)
     t = abs(t0) < abs(t1) and t0 or t1
   else
     t = liangBarsky(l,t,w,h, 0,0,dx,dy, 0,1)
+    -- if t == 0 or t == 1, that means that objects are "touching" (not intersecting) at the beginning/end
+    -- of their movement. Bump does not consider "touch" to be collision - it complicates things too much
+    if t == 0 or t == 1 then t = nil end
   end
 
   if t then return dx1*t, dy1*t, dx2*t, dy2*t, t end
