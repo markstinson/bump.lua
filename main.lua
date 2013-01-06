@@ -18,10 +18,12 @@ local function drawBox(box, r,g,b)
   love.graphics.rectangle("line", box.l, box.t, box.w, box.h)
 end
 
+local boxMt = { __tostring = function(t) return ("{l=%d, t=%d, w=%d, h=%d}"):format(t.l, t.t, t.w, t.h) end }
+
 
 -- Player functions
 
-local player = { l=50,t=50,w=20,h=20 }
+local player
 
 local function updatePlayer(dt)
   local speed = 80
@@ -38,10 +40,10 @@ local function updatePlayer(dt)
   end
 end
 
-local function collidePlayerWithBlock(block,mdx,mdy)
+local function collidePlayerWithBlock(block,dx,dy)
   block.touched = true
-  player.l = player.l + mdx
-  player.t = player.t + mdy
+  player.l = player.l + dx
+  player.t = player.t + dy
 end
 
 local function drawPlayer()
@@ -54,7 +56,7 @@ end
 local blocks = {}
 
 local function addBlock(l,t,w,h)
-  local block = {l=l,t=t,w=w,h=h}
+  local block = setmetatable({l=l,t=t,w=w,h=h}, boxMt)
   blocks[#blocks+1] = block
   bump.add(block)
 end
@@ -72,15 +74,12 @@ end
 
 -- When a collision occurs, call collideWithBlock with the appropiate parameters
 function bump.collision(obj1, obj2, dx1, dy1, dx2, dy2, t)
+  print("collision", obj1, obj2, dx1,dy1, dx2,dy2, t)
   collidePlayerWithBlock(obj2,dx1,dy1)
 end
 
 function bump.endCollision(obj1, obj2)
-  if obj1 == player then
-    obj2.touched = false
-  else
-    obj1.touched = false
-  end
+  obj2.touched = false
 end
 
 -- only the player collides with stuff. Blocks don't collide with themselves
@@ -96,7 +95,7 @@ end
 -- love config
 
 function love.load()
-  player = { l=50,t=50,w=20,h=20 }
+  player = setmetatable({ l=50,t=50,w=20,h=20 }, boxMt)
   bump.add(player)
 
   addBlock(0,       0,     800, 32)
