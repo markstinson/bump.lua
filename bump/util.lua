@@ -7,6 +7,8 @@ local modes = {
   kv = {__mode = 'kv'}
 }
 
+local abs = math.abs
+
 function util.newWeakTable(mode)
   return setmetatable({}, modes[mode or 'k'])
 end
@@ -17,16 +19,8 @@ function util.copy(t)
   return c
 end
 
-function util.abs(x)
-  return x < 0 and -x or x
-end
-local abs = util.abs
-
 function util.nearest(x, a, b)
-  return abs(a - x) < abs(b - x) and a or b
+  if abs(a - x) < abs(b - x) then return a else return b end
 end
-
-function util.min(a,b) return a < b and a or b end
-function util.max(a,b) return a > b and a or b end
 
 return util
