@@ -13,6 +13,7 @@ bump.nodes, bump.cells, bump.aabb, bump.grid, bump.util = nodes, cells, aabb, gr
 --------------------------------------
 -- Locals for faster acdess
 
+local abs, min = math.abs, math.min
 
 local nodes_get, nodes_add, nodes_remove, nodes_update, nodes_each =
       nodes.get, nodes.add, nodes.remove, nodes.update, nodes.each
@@ -25,7 +26,7 @@ local aabb_getDisplacement, aabb_isIntersecting, aabb_getSegmentIntersection, aa
 
 local grid_getBox, grid_getBox2, grid_traverse = grid.getBox, grid.getBox2, grid.traverse
 
-local abs, newWeakTable, min = util.abs, util.newWeakTable, util.min
+local newWeakTable = util.newWeakTable
 
 --------------------------------------
 -- Private stuff
@@ -57,12 +58,12 @@ local function calculateItemCollisions(item1)
       return
     end
 
-    local dx1,dy1,dx2,dy2,t = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
+    local dx1,dy1,dx2,dy2,ti = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
                                                    n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
-    if t then
+    if ti then
       local col = { item1=item1, item2=item2,
                     dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2,
-                    t=t
+                    ti=ti
       }
       collisions[#collisions + 1] = col
       markCollisionAsVisited(item1, item2)
@@ -117,12 +118,12 @@ local function popCollision()
 end
 
 local function collisionSorter(a,b)
-  if a.t == b.t then
+  if a.ti == b.ti then
     a.l = a.l or abs(a.dx1) + abs(a.dy1) + abs(a.dx2) + abs(a.dy2)
     b.l = b.l or abs(b.dx1) + abs(b.dy1) + abs(b.dx2) + abs(b.dy2)
     return a.l > b.l
   end
-  return a.t > b.t
+  return a.ti > b.ti
 end
 
 local function processCollisions()
@@ -133,7 +134,7 @@ local function processCollisions()
   while col do
     item1,item2 = col.item1, col.item2
 
-    bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.t)
+    bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.ti)
 
     item1Moved = moveItem(item1)
     item2Moved = moveItem(item2)
