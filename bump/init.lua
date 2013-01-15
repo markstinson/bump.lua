@@ -66,7 +66,6 @@ local function calculateItemCollisions(item1)
                     ti=ti
       }
       collisions[#collisions + 1] = col
-      markCollisionAsVisited(item1, item2)
     end
   end)
 end
@@ -135,6 +134,7 @@ local function processCollisions()
     item1,item2 = col.item1, col.item2
 
     bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.ti)
+    markCollisionAsVisited(item1, item2)
 
     item1Moved = moveItem(item1)
     item2Moved = moveItem(item2)
