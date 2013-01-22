@@ -1,12 +1,10 @@
 local grid = {}
 
 local path = (...):gsub("%.grid$","")
-local util       = require(path .. '.util')
 
 -- private stuff
 
-local abs, min, max = util.abs, util.min, util.max
-local floor, ceil   = math.floor, math.ceil
+local abs, min, max, floor, ceil = math.abs, math.min, math.max, math.floor, math.ceil
 
 local function gridTraverseInit(cellSize, t, t1, t2)
   local v = t2 - t1
@@ -38,7 +36,7 @@ function grid.getBox2(l1,t1,w1,h1, l2,t2,w2,h2)
   local l,t         = min(l1,l2), min(t1,t2)
   local r1,b1,r2,b2 = l1+w1,t1+h1, l2+w2,t2+h2
   local r,b         = max(r1,r2), max(b1,b2)
-  return l,t, r-1,b-1
+  return l,t, r-l, b-t
 end
 
 -- based on http://www.cse.yorku.ca/~amana/research/grid.pdf
