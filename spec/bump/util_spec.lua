@@ -1,6 +1,7 @@
 local util = require 'bump.util'
 
 describe('bump.util', function()
+
   describe('.copy', function()
     it('creates a copy of a given table', function()
       local t1, t2 = {1,2,3,4}, {a=1,b=2,c=3}
@@ -46,14 +47,6 @@ describe('bump.util', function()
       local wt = util.newWeakTable('kv')
       assertWeakKeys(wt)
       assertWeakValues(wt)
-    end)
-  end)
-
-  describe('.abs', function()
-    it('returns the absolute value of a number', function()
-      assert.equal(1, util.abs(1))
-      assert.equal(1, util.abs(-1))
-      assert.equal(0, util.abs(0))
     end)
   end)
 
