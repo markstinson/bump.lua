@@ -354,7 +354,7 @@ describe("bump", function()
           assert.same({{'item1', 'item2',0,-6,0,0,0}}, collisions)
         end)
 
-        it("is called only once per pair (not twice)", function()
+        it("is called only once per pair (not twice) #focus", function()
           local counter = 0
           bump.collision = function() counter = counter + 1 end
 
@@ -408,7 +408,7 @@ describe("bump", function()
             item1.l = 10
 
             bump.collide()
-            assert.same({{'item1','item2',-18,0,0,0,2}}, collisions)
+            assert.same({{'item1','item2',0,-9,0,0,2}}, collisions)
           end)
         end)
 
