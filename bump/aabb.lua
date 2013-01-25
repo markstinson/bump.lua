@@ -83,7 +83,7 @@ function aabb.getDisplacement(l1,t1,w1,h1,dx1,dy1, l2,t2,w2,h2,dx2,dy2)
       local t0, t1 = liangBarsky(l,t,w,h, 0,0,dx,dy, -inf, inf)
       ti = abs(t0) < abs(t1) and t0 or t1
     end
-    dx, dy  = getNearestPointInPerimeter(l,t,w,h, 0,0)
+    dx, dy = getNearestPointInPerimeter(l,t,w,h, 0,0)
     if abs(dx) < abs(dy) then return dx,0,0,0,ti end
     return 0,dy,0,0,ti
   else

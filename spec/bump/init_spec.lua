@@ -354,7 +354,7 @@ describe("bump", function()
           assert.same({{'item1', 'item2',0,-6,0,0,0}}, collisions)
         end)
 
-        it("is called only once per pair (not twice) #focus", function()
+        it("is called only once per pair (not twice)", function()
           local counter = 0
           bump.collision = function() counter = counter + 1 end
 
@@ -425,20 +425,19 @@ describe("bump", function()
             assert.same({{'item1','item2',-5,-5,5,5, 0.25}}, collisions)
           end)
 
-          it("fires intersections sorted by t", function()
+          it("fires intersections sorted by t #focus", function()
             local item1 = {l=0, t=0,  w=10,h=10, name='item1'}
-            local item2 = {l=20,t=20, w=20,h=10, name='item2'}
-            local item3 = {l=40,t=10, w=30,h=10, name='item3'}
+            local item2 = {l=20,t=0,  w=10,h=10, name='item2'}
+            local item3 = {l=0, t=20, w=10,h=10, name='item3'}
             bump.add(item1, item2, item3)
 
-            item1.l, item1.t = 30,10
-            item2.l, item2.t = 10,25
-            item3.l, item3.t = 30,20
+            item1.l = 40
+            item3.t = -50
 
             bump.collide()
             assert.same({
-              {'item3','item1',2.5,-2.5,-7.5,-2.5,0.25},
-              {'item2','item3',10,-5,10,-10,1}
+              {'item2','item1',0,0,-10,0,0.25},
+              {'item3','item1',0,52.5,-30,0,0.75}
             }, collisions)
 
           end)

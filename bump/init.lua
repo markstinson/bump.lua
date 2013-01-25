@@ -69,8 +69,6 @@ local function calculateItemCollisions(item1)
       return
     end
 
-    markCollisionAsVisited(item1, item2)
-
     local dx1,dy1,dx2,dy2,ti = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
                                                     n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
     if ti then
@@ -80,6 +78,8 @@ local function calculateItemCollisions(item1)
       }
       collisions[#collisions + 1] = col
     end
+
+    markCollisionAsVisited(item1, item2)
   end)
 end
 
