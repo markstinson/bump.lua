@@ -32,7 +32,7 @@ local newWeakTable = util.newWeakTable
 -- Private stuff
 
 local defaultCellSize = 64
-local cellSize, collisions, collisionsVisited, prevCollisions
+local cellSize, collisions, collisionsVisited, collisionsHappened, prevCollisions
 
 local function collisionIsVisited(item1, item2)
   return (collisionsVisited[item1] and collisionsVisited[item1][item2]) or
@@ -44,6 +44,16 @@ local function markCollisionAsVisited(item1,item2)
   collisionsVisited[item1][item2] = true
 end
 
+local function collisionHasHappened(item1, item2)
+  return (collisionsHappened[item1] and collisionsHappened[item1][item2]) or
+         (collisionsHappened[item2] and collisionsHappened[item2][item1])
+end
+
+local function markCollisionAsHappened(item1,item2)
+  collisionsHappened[item1]        = collisionsHappened[item1] or newWeakTable()
+  collisionsHappened[item1][item2] = true
+end
+
 local function calculateItemCollisions(item1)
   local n1 = nodes_get(item1)
   if not n1 then return end
@@ -53,13 +63,14 @@ local function calculateItemCollisions(item1)
     local n2 = nodes_get(item2)
     if not n2
     or collisionIsVisited(item1, item2)
+    or collisionHasHappened(item1, item2)
     or not bump.shouldCollide(item1, item2)
     then
       return
     end
 
     local dx1,dy1,dx2,dy2,ti = aabb_getDisplacement(n1.l, n1.t, n1.w, n1.h, n1.dx, n1.dy,
-                                                   n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
+                                                    n2.l, n2.t, n2.w, n2.h, n2.dx, n2.dy)
     if ti then
       local col = { item1=item1, item2=item2,
                     dx1=dx1, dy1=dy1, dx2=dx2, dy2=dy2,
@@ -67,6 +78,8 @@ local function calculateItemCollisions(item1)
       }
       collisions[#collisions + 1] = col
     end
+
+    markCollisionAsVisited(item1, item2)
   end)
 end
 
@@ -134,7 +147,8 @@ local function processCollisions()
     item1,item2 = col.item1, col.item2
 
     bump.collision(item1, item2, col.dx1, col.dy1, col.dx2,col.dy2, col.ti)
-    markCollisionAsVisited(item1, item2)
+
+    markCollisionAsHappened(item1, item2)
 
     item1Moved = moveItem(item1)
     item2Moved = moveItem(item2)
@@ -270,12 +284,12 @@ end
 function bump.collide(updateBefore)
   if updateBefore ~= false then bump_each(bump.update) end
 
-  collisions, collisionsVisited = {}, newWeakTable()
+  collisions, collisionsVisited, collisionsHappened= {}, newWeakTable(), newWeakTable()
   bump_each(calculateItemCollisions)
   processCollisions()
   processCollisionEnds()
 
-  prevCollisions = collisionsVisited
+  prevCollisions = collisionsHappened
 end
 
 -- This resets the library. You can use it to change the cell size, if you want
